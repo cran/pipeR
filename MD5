@@ -1,0 +1,9 @@
+4e1eabafc10065724f32a7ea1ac0527b *DESCRIPTION
+a4c33df13d06112959c410208abc57a2 *LICENSE
+c06c8814af630a5118b1a45ea63e56d5 *NAMESPACE
+cbaf4fe59c67596dda08233d86b42fe9 *R/functions.R
+caebccde8078f1b84f33955cd5af8005 *R/pipeR.R
+391370204fc6e5fc5cd3d3453b50a782 *README.md
+086fd4e77d700b84aaa0d4153bda31b0 *man/first-argument-piping.Rd
+9d9554f405bdffdc1756639a1ac8cd52 *man/free-piping.Rd
+fd870659df4f040d7e28425dfa576243 *man/lambda-piping.Rd
