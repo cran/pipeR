@@ -1,19 +1,18 @@
 .pipe <- function(.,fun) {
-  . <- substitute(.)
-  fun <- as.list(substitute(fun))
-  call <- as.call(c(fun[1],.,fun[-1]))
-  eval(call,envir = parent.frame())
+  fun <- as.vector(substitute(fun),"list")
+  eval(as.call(c(fun[1],substitute(.),fun[-1])),
+    envir = parent.frame(),enclos = NULL)
 }
 
 .fpipe <- function(.,expr) {
-  env <- new.env(parent = parent.frame())
-  env$. <- .
-  expr <- substitute(expr)
-  eval(expr,envir = env)
+  eval(substitute(expr),
+    envir=list2env(list(.=.),envir=parent.frame()),
+    enclos = NULL)
 }
 
 .lpipe <- function(.,lambda) {
-  env <- new.env(parent = parent.frame())
-  eval(as.call(list(`<-`,lambda[[2]],.)),envir = env)
-  eval(lambda[[3]],envir = env)
+  eval(lambda[[3]],
+    envir = list2env(`names<-`(list(.),
+      as.character(lambda[[2]])),envir = parent.frame()),
+    enclos = NULL)
 }
