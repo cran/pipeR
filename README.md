@@ -1,3 +1,5 @@
+
+
 # pipeR
 
 [![Build Status](https://travis-ci.org/renkun-ken/pipeR.png?branch=master)](https://travis-ci.org/renkun-ken/pipeR)
@@ -27,17 +29,18 @@ devtools::install_github("pipeR","renkun-ken")
 `%>>%` operator inserts the expression on the left-hand side to the first argument of the **function** on the right-hand side.
 
 ```r
-rnorm(100) %>>% plot
-# plot(rnorm(100))
+rnorm(100) %>>% 
+  plot
 
-rnorm(100) %>>% plot()
-# plot(rnorm(100))
+rnorm(100) %>>% 
+  plot()
 
-rnorm(100) %>>% plot(col="red")
-# plot(rnorm(100),col="red")
+rnorm(100) %>>% 
+  plot(col="red")
 
-rnorm(100) %>>% sample(size=100,replace=FALSE) %>>% hist
-# hist(sample(rnorm(100),size=100,replace=FALSE))
+rnorm(100) %>>% 
+  sample(size=100,replace=FALSE) %>>% 
+  hist
 ```
 
 With the first-argument pipe operator `%>>%`, you can write code like
@@ -55,29 +58,28 @@ rnorm(10000,mean=10,sd=1) %>>%
 `%:>%` takes `.` to represent the piped object on the left-hand side and evaluate the *expression* on the right-hand side.
 
 ```r
-rnorm(100) %:>% plot(.)
-# plot(rnorm(100))
+rnorm(100) %:>% 
+  plot(.)
 
-rnorm(100) %:>% plot(., col="red")
-# plot(rnorm(100),col="red")
+rnorm(100) %:>% 
+  plot(., col="red")
 
-rnorm(100) %:>% sample(., size=length(.)*0.5)
-# (`.` is piped to multiple places)
+rnorm(100) %:>% 
+  sample(., size=length(.)*0.5)
 
-mtcars %:>% lm(mpg ~ cyl + disp, data=.) %>>% summary
-# summary(lm(mgp ~ cyl + disp, data=mtcars))
+mtcars %:>% 
+  lm(mpg ~ cyl + disp, data=.) %>>% 
+  summary
 
 rnorm(100) %:>% 
   sample(.,length(.)*0.2,FALSE) %:>% 
   plot(.,main=sprintf("length: %d",length(.)))
-# (`.` is piped to multiple places and mutiple levels)
 
 rnorm(100) %:>% {
   par(mfrow=c(1,2))
   hist(.,main="hist")
   plot(.,col="red",main=sprintf("%d",length(.)))
 }
-# (`.` is piped to an enclosed expression)
 ```
 
 ### Lambda piping
@@ -89,23 +91,48 @@ mtcars %|>%
   (df ~ lm(mpg ~ ., data=df))
 ```
 
-### Mixed piping
-
-All the pipe operators can be used together and each of them only works in their own way.
-
-```r
-mtcars %|>%
-  (df ~ lm(mpg ~ ., data=df)) %>>%
-  summary %:>%
-  .$fstatistic
-```
-
 ## Performance
 
 Since these operators are specialized in their tasks, their performance is very close to traditional approach. 
 
+Here is a simple performance test:
+
+
+```r
+library(magrittr)
+system.time({
+  lapply(1:100000, function(i) {
+    sample(letters,6,replace = T) %>%
+      paste(collapse = "") %>%
+      equals("rstats")
+  })
+})
+```
+
+```
+   user  system elapsed 
+  30.12    0.00   30.15 
+```
+
+
+```r
+library(pipeR)
+system.time({
+  lapply(1:100000, function(i) {
+    sample(letters,6,replace = T) %>>%
+      paste(collapse = "") %>>%
+      equals("rstats")
+  })
+})
+```
+
+```
+   user  system elapsed 
+    2.7     0.0     2.7 
+```
+
 - If you want to stick to a single operator and do not consider the performance of intensive calling, you may use `%>%` in [magrittr](https://github.com/smbache/magrittr) which also provides additional aliases of basic functions. 
-- If you care about performance issues and are sure which type of piping you are using, it's better to use pipeR operators. 
+- If you care about performance issues and are sure which type of piping you are using, pipeR can be a helpful choice in addition to magrittr.
 
 ## Vignettes
 

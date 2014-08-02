@@ -1,10 +1,10 @@
-3d44ea09d3da3f0118a4514a966a8837 *DESCRIPTION
+06646d9c87cccbdd9cad366f6790084d *DESCRIPTION
 a4c33df13d06112959c410208abc57a2 *LICENSE
 9b1f5940206561cf03bee9ee8fed3b66 *NAMESPACE
-7cb6e0701c19a2522218983808c7886b *NEWS
-fff5a3146d828fedf954460646338e68 *R/functions.R
-f9396b3b8214fdeb41449d334cd23342 *R/pipeR.R
-ff8fc41448794de52468de5da5692e1b *README.md
+0e31f50e7b47b9cf33566ef1cdbe644c *NEWS
+cb0e5744d0caf5a39a6de59ad268139e *R/functions.R
+d406798a4979bff22fe5743d35ac8fab *R/pipeR.R
+ba25a040c20dbe0ce591fbedaedf6683 *README.md
 52a10733c4679a40bc1cdbae466cb386 *build/vignette.rds
 cfc259589e4c2104ce8f2b0dea7d79c2 *inst/doc/Examples.R
 ebe4bfff263f0c19aae9c28a7a025caf *inst/doc/Examples.html
@@ -12,9 +12,9 @@ ebe4bfff263f0c19aae9c28a7a025caf *inst/doc/Examples.html
 3402830d3f000f723f09a2e564e9a672 *inst/doc/Introduction.html
 bc76a1124c62d973ee2890557ec8a6b6 *inst/doc/Performance.R
 d895f19a6daf5377e2419f51a3e28623 *inst/doc/Performance.html
-ed1d60c5c660be446537f137d0a119f9 *man/first-argument-piping.Rd
+5a76f572dae73ac43ed65f65f7ce4450 *man/first-argument-piping.Rd
 48d6df5b70c3d475b16ec6772085ea1b *man/free-piping.Rd
-fd870659df4f040d7e28425dfa576243 *man/lambda-piping.Rd
+f18d10d5021227187c2e08216a405b6d *man/lambda-piping.Rd
 9db1ae63d220773e4e0d06f066d1ae94 *tests/testthat.R
 4b4616196b890a6e7b9d2e29c89add96 *tests/testthat/test-fa-pipe.R
 c219a5c12f8ad6c170da3916d586ba54 *tests/testthat/test-free-pipe.R
