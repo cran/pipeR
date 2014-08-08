@@ -13,6 +13,14 @@ mtcars %>>%
   do(data.frame(mean=mean(.$rmpg),median=median(.$rmpg)))
 
 ## ------------------------------------------------------------------------
+Pipe(mtcars)$
+  select(mpg,cyl,disp,hp)$
+  filter(mpg <= median(mpg))$
+  mutate(rmpg = mpg / max(mpg))$
+  group_by(cyl)$
+  do(data.frame(mean=mean(.$rmpg),median=median(.$rmpg))) []
+
+## ------------------------------------------------------------------------
 library(rlist)
 library(pipeR)
 devs <- 
@@ -34,10 +42,23 @@ devs %>>%
   list.stack
 
 ## ------------------------------------------------------------------------
+Pipe(devs)$
+  list.filter("music" %in% interest & "r" %in% names(lang))$
+  list.select(name,age)$
+  list.stack() []
+
+## ------------------------------------------------------------------------
 devs %>>%
   list.group(age) %>>%
   list.map(group -> group %>>%
       list.class(interest) %>>%
-      list.map(int -> length(int))) %>>%
-  str
+      list.mapv(int -> length(int)))
+
+## ------------------------------------------------------------------------
+Pipe(devs)$
+  list.group(age)$
+  list.map(group -> Pipe(group)$
+      list.class(interest)$
+      list.mapv(int -> length(int))[] 
+    )[]
 

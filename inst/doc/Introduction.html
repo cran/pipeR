@@ -45,9 +45,6 @@ var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/<
 hljs.initHighlightingOnLoad();
 </script>
 
-<!-- MathJax scripts -->
-<script type="text/javascript" src="https://c328740.ssl.cf1.rackcdn.com/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-</script>
 
 
 <style type="text/css">
@@ -197,26 +194,29 @@ hr {
 
 <h1>Introduction to pipeR</h1>
 
-<p>pipeR is a set of specialized, high-performance pipeline operators.</p>
+<p>pipeR provides high-performance pipeline operator and object.</p>
 
-<h2>First-argument piping</h2>
+<h2><code>%&gt;&gt;%</code></h2>
 
-<p>The first-argument pipe operator <code>%&gt;&gt;%</code> inserts the expression on the left-hand side to the first argument of the <strong>function</strong> on the right-hand side. In other words, <code>x %&gt;&gt;% f(a=1)</code> will be transformed to and be evaluated as <code>f(x,a=1)</code>. This operator accepts both function call, e.g. <code>plot()</code> or <code>plot(col=&quot;red&quot;)</code>, and function name, e.g. <code>log</code> or <code>plot</code>.</p>
+<h3>Pipe as first-argument to function</h3>
 
-<pre><code class="r">rnorm(100) %&gt;&gt;% plot
-# plot(rnorm(100))
+<p>The pipe operator <code>%&gt;&gt;%</code> by default inserts the object on the left-hand side to the first argument of the <strong>function</strong> on the right-hand side. In other words, <code>x %&gt;&gt;% f(a=1)</code> will be transformed to and be evaluated as <code>f(.,a=1)</code> where <code>.</code> takes the value of <code>x</code>. It accepts both function call, e.g. <code>plot()</code> or <code>plot(col=&quot;red&quot;)</code>, and function name, e.g. <code>log</code> or <code>plot</code>.</p>
 
-rnorm(100) %&gt;&gt;% plot()
-# plot(rnorm(100))
+<pre><code class="r">rnorm(100) %&gt;&gt;% 
+  plot
 
-rnorm(100) %&gt;&gt;% plot(col=&quot;red&quot;)
-# plot(rnorm(100),col=&quot;red&quot;)
+rnorm(100) %&gt;&gt;% 
+  plot()
 
-rnorm(100) %&gt;&gt;% sample(size=100,replace=FALSE) %&gt;&gt;% hist
-# hist(sample(rnorm(100),size=100,replace=FALSE))
+rnorm(100) %&gt;&gt;% 
+  plot(col=&quot;red&quot;)
+
+rnorm(100) %&gt;&gt;% 
+  sample(size=100,replace=FALSE) %&gt;&gt;% 
+  hist
 </code></pre>
 
-<p>With the first-argument pipe operator <code>%&gt;&gt;%</code>, you can write code like</p>
+<p>You can write commands in a chain (or pipeline) like</p>
 
 <pre><code class="r">rnorm(10000,mean=10,sd=1) %&gt;&gt;%
   sample(size=100,replace=FALSE) %&gt;&gt;%
@@ -225,83 +225,85 @@ rnorm(100) %&gt;&gt;% sample(size=100,replace=FALSE) %&gt;&gt;% hist
   plot(col=&quot;red&quot;,type=&quot;l&quot;)
 </code></pre>
 
-<p>*Notice: function call within a namespace must end up with parentheses  like <code>x %&gt;&gt;% namespace::fun()</code>.</p>
+<p>In some cases, the next function needs first-argument piping and uses the piped object elsewhere too. Therefore, you can directly use <code>.</code> to represent the piped object within that call.</p>
 
-<h2>Free piping</h2>
+<pre><code class="r">rnorm(100) %&gt;&gt;%
+  plot(col=&quot;red&quot;,main=sprintf(&quot;Number of points: %d&quot;,length(.)))
+</code></pre>
 
-<p>You may not always want to pipe the object to the first argument of the next function. Then you can use free pipe operator <code>%:&gt;%</code>, which takes <code>.</code> to represent the piped object on the left-hand side and evaluate the <em>expression</em> on the right-hand side with <code>.</code> as the piped object. In other words, you have the right to decide where the object should be piped to.</p>
+<p>*Notice: function call in a namespace must end up with parentheses like <code>x %&gt;&gt;% base::mean()</code>.</p>
 
-<pre><code class="r">rnorm(100) %:&gt;% plot(.)
-# plot(rnorm(100))
+<h3>Pipe as <code>.</code> to expression</h3>
 
-rnorm(100) %:&gt;% plot(., col=&quot;red&quot;)
-# plot(rnorm(100),col=&quot;red&quot;)
+<p>If a function name or call directly follows <code>%&gt;&gt;%</code>, it means first-argument piping. If the operator is follows by braces (<code>{}</code>), the inner expression will be evaluated with <code>.</code> representing the piped object.</p>
 
-rnorm(100) %:&gt;% sample(., size=length(.)*0.5)
-# (`.` is piped to multiple places)
+<pre><code class="r">rnorm(100) %&gt;&gt;% 
+  { plot(.) }
 
-mtcars %:&gt;% lm(mpg ~ cyl + disp, data=.) %&gt;&gt;% summary
-# summary(lm(mgp ~ cyl + disp, data=mtcars))
+rnorm(100) %&gt;&gt;% 
+  { plot(., col=&quot;red&quot;) }
 
-rnorm(100) %:&gt;% 
-  sample(.,length(.)*0.2,FALSE) %:&gt;% 
-  plot(.,main=sprintf(&quot;length: %d&quot;,length(.)))
-# (`.` is piped to multiple places and mutiple levels)
+rnorm(100) %&gt;&gt;% 
+  { sample(., size=length(.)*0.5) }
 
-rnorm(100) %:&gt;% {
+mtcars %&gt;&gt;% {
+  lm(mpg ~ cyl + disp, data=.) %&gt;&gt;% 
+  summary
+}
+
+rnorm(100) %&gt;&gt;% {
   par(mfrow=c(1,2))
   hist(.,main=&quot;hist&quot;)
   plot(.,col=&quot;red&quot;,main=sprintf(&quot;%d&quot;,length(.)))
 }
-# (`.` is piped to an enclosed expression)
-
-rnorm(10000,mean=10,sd=1) %:&gt;%
-  sample(.,size=length(.)*0.2,replace=FALSE) %&gt;&gt;%
-  log %&gt;&gt;%
-  diff %:&gt;%
-  plot(.,col=&quot;red&quot;,type=&quot;l&quot;,main=sprintf(&quot;length: %d&quot;,length(.)))
-# (`%&gt;&gt;%` and `%:&gt;%` are used together. Be clear what they mean)
 </code></pre>
 
-<h2>Lambda piping</h2>
+<h3>Pipe by lambda expression</h3>
 
 <p>It can be confusing to see multiple <code>.</code> symbols in the same context. In some cases, they may represent different things in the same expression. Even though the expression mostly still works, it may not be a good idea to keep it in that way. Here is an example:</p>
 
-<pre><code class="r">mtcars %:&gt;%
-  lm(mpg ~ ., data=.) %&gt;&gt;%
+<pre><code class="r">mtcars %&gt;&gt;%
+  { lm(mpg ~ ., data=.) } %&gt;&gt;%
   summary
 </code></pre>
 
-<p>The code above works correctly with <code>%:&gt;%</code> and <code>%&gt;&gt;%</code>, even though the two dots in the second line have different meanings. <code>.</code> in formula <code>mpg ~ .</code> represents all variables other than <code>mpg</code> in data frame <code>mtcars</code>; <code>.</code> in <code>data=.</code> represents <code>mtcars</code> itself. One way to reduce ambiguity is to use <em>lambda expression</em> that names the piped object on the left of <code>~</code> and specifies the expression to evaluate on the right.</p>
+<p>The code above works correctly even though the two dots in the second line have different meanings. <code>.</code> in formula <code>mpg ~ .</code> represents all variables other than <code>mpg</code> in data frame <code>mtcars</code>; <code>.</code> in <code>data=.</code> represents <code>mtcars</code>. One way to reduce ambiguity is to use <em>lambda expression</em> that names the piped object on the left of <code>~</code> or <code>-&gt;</code> and specifies the expression to evaluate on the right.</p>
 
-<p>A new pipe operator <code>%|&gt;%</code> is defined, which works with lambda expression in the formula form <code>x ~ f(x)</code>. More specifically, the expression will be interpreted as *<code>f(x)</code> is evaluated with <code>x</code> being the piped object*. Therefore, the previous example can be rewritten with <code>%|&gt;%</code> like this:</p>
+<p><code>%&gt;&gt;%</code> will assume lambda expression follows when the next expression is enclosed by parentheses <code>()</code>. The lambda expression can be in the following forms:</p>
 
-<pre><code class="r">mtcars %|&gt;%
-  (df ~ lm(mpg ~ ., data=df)) %&gt;&gt;%
+<ul>
+<li><code>expr</code> where <code>.</code> is by default used to represent the piped object.</li>
+<li><code>x -&gt; expr</code> or <code>x ~ expr</code> where <code>expr</code> will be evaluated with <code>x</code> representing the piped object.</li>
+</ul>
+
+<p>The previous example can be rewritten with lambda expression like this:</p>
+
+<pre><code class="r">mtcars %&gt;&gt;%
+  (df -&gt; lm(mpg ~ ., data=df)) %&gt;&gt;%
   summary
 </code></pre>
 
-<p>Moreover, you can store the lambda expressions by assigning the formula to symbols.</p>
+<h2>Pipe object</h2>
 
-<pre><code class="r">runlm &lt;- df ~ lm(mpg ~ ., data=df)
-plotlm &lt;- m ~ {
-  par(mfrow=c(2,2))
-  plot(m,ask=FALSE)
-}
+<p><code>Pipe()</code> creates a Pipe object where built-in symbols are designed for building pipeline. </p>
 
-mtcars %|&gt;%
-  runlm %|&gt;%
-  plotlm
+<ul>
+<li><code>$</code> chains functions by first-argument piping and always returns a Pipe object.</li>
+<li><code>fun()</code> evaluates an expression with <code>.</code> or by lambda expression.</li>
+<li><code>[]</code> extracts the final value of the Pipe object.</li>
+</ul>
+
+<p>Pipe as first-argument to a function:</p>
+
+<pre><code class="r">Pipe(rnorm(100,mean=10))$
+  log()$
+  diff()$
+  plot(col=&quot;red&quot;)
 </code></pre>
 
-<h2>Mixed piping</h2>
-
-<p>All the pipe operators can be used together and each of them only works in their own way.</p>
-
-<pre><code class="r">mtcars %|&gt;%
-  (df ~ lm(mpg ~ ., data=df)) %&gt;&gt;%
-  summary %:&gt;%
-  .$fstatistic
+<pre><code class="r">Pipe(1:10)$
+  fun(x -&gt; x + rnorm(1))$
+  mean() []
 </code></pre>
 
 </body>

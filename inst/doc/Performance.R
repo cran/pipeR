@@ -1,18 +1,42 @@
 ## ----, echo = FALSE, message = FALSE-------------------------------------
 knitr::opts_chunk$set(comment="#",error=FALSE,tidy=FALSE)
 set.seed(1)
+library(magrittr)
+library(pipeR)
 
 ## ------------------------------------------------------------------------
-library(magrittr)
+system.time(
+  replicate(100000, {
+    paste(sample(letters,6,replace = T),collapse = "") == "rstats"
+    })
+  )
 
-# magrittr::`%>%`
-system.time(lapply(1:50000, function(i) 
-  rnorm(100) %>% c(rnorm(100))))
+## ------------------------------------------------------------------------
+system.time(
+  replicate(100000,{
+    sample(letters,6,replace = T) %>%
+      paste(collapse = "") %>%
+      equals("rstats")
+    })  
+  )
 
-library(pipeR)   
-# pipeR::`%>>%`
-system.time(lapply(1:50000, function(i) 
-  rnorm(100) %>>% c(rnorm(100))))
+## ------------------------------------------------------------------------
+system.time({
+  1:100000 %>>% lapply(function(i) {
+    sample(letters,6,replace = T) %>>%
+      paste(collapse = "") %>>%
+      equals("rstats")
+    })    
+  })
+
+## ------------------------------------------------------------------------
+system.time(
+  replicate(100000, {
+    Pipe(sample(letters,6,replace = T))$
+      paste(collapse = "")$
+      equals("rstats") []
+    })
+  )
 
 ## ------------------------------------------------------------------------
 # magrittr::`%>%`

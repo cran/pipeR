@@ -45,9 +45,6 @@ var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/<
 hljs.initHighlightingOnLoad();
 </script>
 
-<!-- MathJax scripts -->
-<script type="text/javascript" src="https://c328740.ssl.cf1.rackcdn.com/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-</script>
 
 
 <style type="text/css">
@@ -198,46 +195,76 @@ hr {
 
 <h1>Performance</h1>
 
-<p>Each operator defined in this package specializes in its work and is made as simple as possible. Therefore the overhead is extremely low and their performance is very close to traditional approach. This allow you to build long and nested pipelines and perform intensive computations without worrying much about the performance cost.</p>
+<p>pipeR operator and Pipe object can achieve high performance especially when they are intensively called.</p>
 
 <ul>
-<li>If you want to stick to a single operator and do not consider the performance of intensive calling, you may use <code>%&gt;%</code> in <a href="https://github.com/smbache/magrittr">magrittr</a> which also provides additional aliases of basic functions. </li>
-<li>If you care about performance issues and are sure which type of piping you are using, it&#39;s better to use pipeR operators. Below is a simple test of the performance.</li>
+<li>If you do not care about the performance of intensive calling and need heuristic distinction between different piping mechanisms, you may use <code>%&gt;%</code> in <a href="https://github.com/smbache/magrittr">magrittr</a> which also provides additional aliases of basic functions. </li>
+<li>If you care about performance issues and are sure which type of piping you are using, pipeR can be a helpful choice.</li>
 </ul>
 
-<pre><code class="r">library(magrittr)
-</code></pre>
+<h2>Simple test case</h2>
 
-<pre><code># 
-# Attaching package: &#39;magrittr&#39;
-# 
-# The following object is masked from &#39;package:dplyr&#39;:
-# 
-#     %&gt;%
-# 
-# The following objects are masked from &#39;package:testthat&#39;:
-# 
-#     equals, is_less_than, not
-</code></pre>
+<p>Run an experiment for 100000 times. Each time we take a random sample from lower letters (a-z) with replacement, paste these letters together and see whether it equals the string <em>rstats</em>.</p>
 
-<pre><code class="r"># magrittr::`%&gt;%`
-system.time(lapply(1:50000, function(i) 
-  rnorm(100) %&gt;% c(rnorm(100))))
+<h3>Native implementation</h3>
+
+<pre><code class="r">system.time(
+  replicate(100000, {
+    paste(sample(letters,6,replace = T),collapse = &quot;&quot;) == &quot;rstats&quot;
+    })
+  )
 </code></pre>
 
 <pre><code>#    user  system elapsed 
-#    9.00    0.01    9.27
+#    1.27    0.00    1.27
 </code></pre>
 
-<pre><code class="r">library(pipeR)   
-# pipeR::`%&gt;&gt;%`
-system.time(lapply(1:50000, function(i) 
-  rnorm(100) %&gt;&gt;% c(rnorm(100))))
+<h3>Using magrittr&#39;s <code>%&gt;%</code></h3>
+
+<pre><code class="r">system.time(
+  replicate(100000,{
+    sample(letters,6,replace = T) %&gt;%
+      paste(collapse = &quot;&quot;) %&gt;%
+      equals(&quot;rstats&quot;)
+    })  
+  )
 </code></pre>
 
 <pre><code>#    user  system elapsed 
-#    1.81    0.00    1.81
+#   27.55    0.01   27.66
 </code></pre>
+
+<h3>Using pipeR&#39;s <code>%&gt;&gt;%</code></h3>
+
+<pre><code class="r">system.time({
+  1:100000 %&gt;&gt;% lapply(function(i) {
+    sample(letters,6,replace = T) %&gt;&gt;%
+      paste(collapse = &quot;&quot;) %&gt;&gt;%
+      equals(&quot;rstats&quot;)
+    })    
+  })
+</code></pre>
+
+<pre><code>#    user  system elapsed 
+#    3.88    0.00    3.88
+</code></pre>
+
+<h3>Using pipeR&#39;s Pipe object</h3>
+
+<pre><code class="r">system.time(
+  replicate(100000, {
+    Pipe(sample(letters,6,replace = T))$
+      paste(collapse = &quot;&quot;)$
+      equals(&quot;rstats&quot;) []
+    })
+  )
+</code></pre>
+
+<pre><code>#    user  system elapsed 
+#    4.58    0.00    4.58
+</code></pre>
+
+<h2>Nested levels</h2>
 
 <p>The more levels the operator is nested in iterations, the larger the performance difference will be.</p>
 
@@ -249,7 +276,7 @@ system.time(lapply(1:1000, function(i)
 </code></pre>
 
 <pre><code>#    user  system elapsed 
-#   15.08    0.00   15.27
+#   15.68    0.04   15.77
 </code></pre>
 
 <pre><code class="r"># pipeR::`%&gt;&gt;%`
@@ -260,10 +287,10 @@ system.time(lapply(1:1000, function(i)
 </code></pre>
 
 <pre><code>#    user  system elapsed 
-#    2.70    0.00    2.71
+#    3.75    0.03    3.80
 </code></pre>
 
-<p>These packages use different set of symbols and are thus compatibile with each other. You may choose according to your needs and considerations.</p>
+<p>These packages use different set of symbols and are thus compatible with each other. You may choose according to your needs and considerations.</p>
 
 </body>
 

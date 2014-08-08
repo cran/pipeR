@@ -45,9 +45,6 @@ var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/<
 hljs.initHighlightingOnLoad();
 </script>
 
-<!-- MathJax scripts -->
-<script type="text/javascript" src="https://c328740.ssl.cf1.rackcdn.com/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-</script>
 
 
 <style type="text/css">
@@ -206,21 +203,7 @@ hr {
 <p>The following code demonstrates piping with <code>dplyr</code> functions.</p>
 
 <pre><code class="r">library(dplyr)
-</code></pre>
-
-<pre><code># 
-# Attaching package: &#39;dplyr&#39;
-# 
-# The following objects are masked from &#39;package:stats&#39;:
-# 
-#     filter, lag
-# 
-# The following objects are masked from &#39;package:base&#39;:
-# 
-#     intersect, setdiff, setequal, union
-</code></pre>
-
-<pre><code class="r">library(pipeR)
+library(pipeR)
 
 mtcars %&gt;&gt;%
   select(mpg,cyl,disp,hp) %&gt;&gt;%
@@ -239,6 +222,24 @@ mtcars %&gt;&gt;%
 </code></pre>
 
 <p><code>.</code> in the last call is introduced by <code>do(...)</code> rather than <code>%&gt;&gt;%</code>, which also makes it clear the scope of symbols.</p>
+
+<p>Equivalently, Pipe object can do the same thing.</p>
+
+<pre><code class="r">Pipe(mtcars)$
+  select(mpg,cyl,disp,hp)$
+  filter(mpg &lt;= median(mpg))$
+  mutate(rmpg = mpg / max(mpg))$
+  group_by(cyl)$
+  do(data.frame(mean=mean(.$rmpg),median=median(.$rmpg))) []
+</code></pre>
+
+<pre><code># Source: local data frame [2 x 3]
+# Groups: cyl
+# 
+#   cyl   mean median
+# 1   6 0.9566 0.9427
+# 2   8 0.7865 0.7917
+</code></pre>
 
 <h2>Working with rlist</h2>
 
@@ -274,24 +275,54 @@ devs &lt;-
 # 2 James  25
 </code></pre>
 
+<p>or equivalently using Pipe object:</p>
+
+<pre><code class="r">Pipe(devs)$
+  list.filter(&quot;music&quot; %in% interest &amp; &quot;r&quot; %in% names(lang))$
+  list.select(name,age)$
+  list.stack() []
+</code></pre>
+
+<pre><code>#    name age
+# 1   Ken  24
+# 2 James  25
+</code></pre>
+
 <p>The following example groups the developers by age and for each group it classifies the developers into interest classes and count the number of people in each class.</p>
 
 <pre><code class="r">devs %&gt;&gt;%
   list.group(age) %&gt;&gt;%
   list.map(group -&gt; group %&gt;&gt;%
       list.class(interest) %&gt;&gt;%
-      list.map(int -&gt; length(int))) %&gt;&gt;%
-  str
+      list.mapv(int -&gt; length(int)))
 </code></pre>
 
-<pre><code># List of 2
-#  $ 24:List of 3
-#   ..$ movies : int 2
-#   ..$ music  : int 1
-#   ..$ reading: int 2
-#  $ 25:List of 2
-#   ..$ music : int 1
-#   ..$ sports: int 1
+<pre><code># $`24`
+#  movies   music reading 
+#       2       1       2 
+# 
+# $`25`
+#  music sports 
+#      1      1
+</code></pre>
+
+<p>or equivalently using Pipe object:</p>
+
+<pre><code class="r">Pipe(devs)$
+  list.group(age)$
+  list.map(group -&gt; Pipe(group)$
+      list.class(interest)$
+      list.mapv(int -&gt; length(int))[] 
+    )[]
+</code></pre>
+
+<pre><code># $`24`
+#  movies   music reading 
+#       2       1       2 
+# 
+# $`25`
+#  music sports 
+#      1      1
 </code></pre>
 
 </body>
