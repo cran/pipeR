@@ -6,14 +6,14 @@ library(pipeR)
 
 ## ------------------------------------------------------------------------
 system.time(
-  replicate(100000, {
+  replicate(10000, {
     paste(sample(letters,6,replace = T),collapse = "") == "rstats"
     })
   )
 
 ## ------------------------------------------------------------------------
 system.time(
-  replicate(100000,{
+  replicate(10000,{
     sample(letters,6,replace = T) %>%
       paste(collapse = "") %>%
       equals("rstats")
@@ -22,7 +22,7 @@ system.time(
 
 ## ------------------------------------------------------------------------
 system.time({
-  1:100000 %>>% lapply(function(i) {
+  1:10000 %>>% lapply(function(i) {
     sample(letters,6,replace = T) %>>%
       paste(collapse = "") %>>%
       equals("rstats")
@@ -31,7 +31,7 @@ system.time({
 
 ## ------------------------------------------------------------------------
 system.time(
-  replicate(100000, {
+  replicate(10000, {
     Pipe(sample(letters,6,replace = T))$
       paste(collapse = "")$
       equals("rstats") []
@@ -40,13 +40,13 @@ system.time(
 
 ## ------------------------------------------------------------------------
 # magrittr::`%>%`
-system.time(lapply(1:1000, function(i) 
+system.time(lapply(1:100, function(i) 
   rnorm(100) %>% c(rnorm(100),
     sapply(1:100, function(j) 
       rnorm(50) %>% c(rnorm(50))))))
 
 # pipeR::`%>>%`
-system.time(lapply(1:1000, function(i) 
+system.time(lapply(1:100, function(i) 
   rnorm(100) %>>% c(rnorm(100),
     sapply(1:100, function(j) 
       rnorm(50) %>>% c(rnorm(50))))))

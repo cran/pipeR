@@ -204,25 +204,25 @@ hr {
 
 <h2>Simple test case</h2>
 
-<p>Run an experiment for 100000 times. Each time we take a random sample from lower letters (a-z) with replacement, paste these letters together and see whether it equals the string <em>rstats</em>.</p>
+<p>Run an experiment for 10000 times. Each time we take a random sample from lower letters (a-z) with replacement, paste these letters together and see whether it equals the string <em>rstats</em>.</p>
 
 <h3>Native implementation</h3>
 
 <pre><code class="r">system.time(
-  replicate(100000, {
+  replicate(10000, {
     paste(sample(letters,6,replace = T),collapse = &quot;&quot;) == &quot;rstats&quot;
     })
   )
 </code></pre>
 
 <pre><code>#    user  system elapsed 
-#    1.27    0.00    1.27
+#    0.13    0.00    0.10
 </code></pre>
 
 <h3>Using magrittr&#39;s <code>%&gt;%</code></h3>
 
 <pre><code class="r">system.time(
-  replicate(100000,{
+  replicate(10000,{
     sample(letters,6,replace = T) %&gt;%
       paste(collapse = &quot;&quot;) %&gt;%
       equals(&quot;rstats&quot;)
@@ -231,13 +231,13 @@ hr {
 </code></pre>
 
 <pre><code>#    user  system elapsed 
-#   27.55    0.01   27.66
+#    2.80    0.00    2.86
 </code></pre>
 
 <h3>Using pipeR&#39;s <code>%&gt;&gt;%</code></h3>
 
 <pre><code class="r">system.time({
-  1:100000 %&gt;&gt;% lapply(function(i) {
+  1:10000 %&gt;&gt;% lapply(function(i) {
     sample(letters,6,replace = T) %&gt;&gt;%
       paste(collapse = &quot;&quot;) %&gt;&gt;%
       equals(&quot;rstats&quot;)
@@ -246,13 +246,13 @@ hr {
 </code></pre>
 
 <pre><code>#    user  system elapsed 
-#    3.88    0.00    3.88
+#    0.29    0.00    0.30
 </code></pre>
 
 <h3>Using pipeR&#39;s Pipe object</h3>
 
 <pre><code class="r">system.time(
-  replicate(100000, {
+  replicate(10000, {
     Pipe(sample(letters,6,replace = T))$
       paste(collapse = &quot;&quot;)$
       equals(&quot;rstats&quot;) []
@@ -261,7 +261,7 @@ hr {
 </code></pre>
 
 <pre><code>#    user  system elapsed 
-#    4.58    0.00    4.58
+#    0.43    0.00    0.44
 </code></pre>
 
 <h2>Nested levels</h2>
@@ -269,25 +269,25 @@ hr {
 <p>The more levels the operator is nested in iterations, the larger the performance difference will be.</p>
 
 <pre><code class="r"># magrittr::`%&gt;%`
-system.time(lapply(1:1000, function(i) 
+system.time(lapply(1:100, function(i) 
   rnorm(100) %&gt;% c(rnorm(100),
     sapply(1:100, function(j) 
       rnorm(50) %&gt;% c(rnorm(50))))))
 </code></pre>
 
 <pre><code>#    user  system elapsed 
-#   15.68    0.04   15.77
+#    2.11    0.00    2.12
 </code></pre>
 
 <pre><code class="r"># pipeR::`%&gt;&gt;%`
-system.time(lapply(1:1000, function(i) 
+system.time(lapply(1:100, function(i) 
   rnorm(100) %&gt;&gt;% c(rnorm(100),
     sapply(1:100, function(j) 
       rnorm(50) %&gt;&gt;% c(rnorm(50))))))
 </code></pre>
 
 <pre><code>#    user  system elapsed 
-#    3.75    0.03    3.80
+#    0.30    0.00    0.29
 </code></pre>
 
 <p>These packages use different set of symbols and are thus compatible with each other. You may choose according to your needs and considerations.</p>

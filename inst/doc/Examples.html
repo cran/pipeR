@@ -190,8 +190,6 @@ hr {
 <!--
 %\VignetteEngine{knitr}
 %\VignetteIndexEntry{Examples}
-%\VignetteDepends{dplyr}
-%\VignetteDepends{rlist}
 -->
 
 <h1>Examples</h1>
@@ -213,14 +211,6 @@ mtcars %&gt;&gt;%
   do(data.frame(mean=mean(.$rmpg),median=median(.$rmpg)))
 </code></pre>
 
-<pre><code># Source: local data frame [2 x 3]
-# Groups: cyl
-# 
-#   cyl   mean median
-# 1   6 0.9566 0.9427
-# 2   8 0.7865 0.7917
-</code></pre>
-
 <p><code>.</code> in the last call is introduced by <code>do(...)</code> rather than <code>%&gt;&gt;%</code>, which also makes it clear the scope of symbols.</p>
 
 <p>Equivalently, Pipe object can do the same thing.</p>
@@ -231,14 +221,6 @@ mtcars %&gt;&gt;%
   mutate(rmpg = mpg / max(mpg))$
   group_by(cyl)$
   do(data.frame(mean=mean(.$rmpg),median=median(.$rmpg))) []
-</code></pre>
-
-<pre><code># Source: local data frame [2 x 3]
-# Groups: cyl
-# 
-#   cyl   mean median
-# 1   6 0.9566 0.9427
-# 2   8 0.7865 0.7917
 </code></pre>
 
 <h2>Working with rlist</h2>
@@ -270,22 +252,12 @@ devs &lt;-
   list.stack
 </code></pre>
 
-<pre><code>#    name age
-# 1   Ken  24
-# 2 James  25
-</code></pre>
-
 <p>or equivalently using Pipe object:</p>
 
 <pre><code class="r">Pipe(devs)$
   list.filter(&quot;music&quot; %in% interest &amp; &quot;r&quot; %in% names(lang))$
   list.select(name,age)$
   list.stack() []
-</code></pre>
-
-<pre><code>#    name age
-# 1   Ken  24
-# 2 James  25
 </code></pre>
 
 <p>The following example groups the developers by age and for each group it classifies the developers into interest classes and count the number of people in each class.</p>
@@ -297,15 +269,6 @@ devs &lt;-
       list.mapv(int -&gt; length(int)))
 </code></pre>
 
-<pre><code># $`24`
-#  movies   music reading 
-#       2       1       2 
-# 
-# $`25`
-#  music sports 
-#      1      1
-</code></pre>
-
 <p>or equivalently using Pipe object:</p>
 
 <pre><code class="r">Pipe(devs)$
@@ -314,15 +277,6 @@ devs &lt;-
       list.class(interest)$
       list.mapv(int -&gt; length(int))[] 
     )[]
-</code></pre>
-
-<pre><code># $`24`
-#  movies   music reading 
-#       2       1       2 
-# 
-# $`25`
-#  music sports 
-#      1      1
 </code></pre>
 
 </body>

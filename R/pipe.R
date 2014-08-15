@@ -1,19 +1,3 @@
-#' Evaluate a lambda expression for Pipe object
-#' @param value value
-#' @param expr the lambda expression in the following forms:
-#'
-#' 1. An expression with \code{.} representing \code{value}
-#'
-#' 2. \code{x -> f(x)}
-#'
-#' 3. \code{x ~ f(x)}
-#' @param envir the environment to evaluate \code{expr}.
-#' @export
-fun <- function(value, expr, envir = parent.frame(2L)) {
-  expr <- substitute(expr)
-  pipe.lambda(value,expr,envir)
-}
-
 #' Pipe object
 #' @details
 #' Pipe object provides object-based mechanism for command chaining, which avoids using
@@ -21,15 +5,20 @@ fun <- function(value, expr, envir = parent.frame(2L)) {
 #'
 #' \code{Pipe()} creates a Pipe object and then we can use \code{$} to perform
 #' first-argument piping, call \code{fun()} to evaluate an expression with \code{.}
-#' or symbol defined by lambda expression. \code{[]} ends a pipeline and extracts
-#' its final value.
+#' or symbol defined by lambda expression. \code{$value} or \code{[]} ends a pipeline
+#' and extracts its final value.
 #'
 #' A typical usage of Pipe object is to start with \code{Pipe()} and end with
-#' \code{[]}.
-#' @param value value to pipe
+#' \code{$value} or \code{[]}.
+#'
+#' \code{print()} and \code{str()} are implemented for \code{Pipe} object.
+#' Use \code{header = FALSE} to suppress Pipe header message in printed results.
+#' Use \code{options(Pipe.header = FASLE)} to suppress it globally.
+#' @param value value to pipe (default is \code{NULL})
 #' @name Pipe
 #' @return Pipe object
 #' @examples
+#' \dontrun{
 #' # Pipe as first-argument using $
 #' Pipe(rnorm(100))$mean()
 #' Pipe(rnorm(100))$plot(col="red")
@@ -62,21 +51,49 @@ fun <- function(value, expr, envir = parent.frame(2L)) {
 #'   group_by(cyl)$
 #'   do(data.frame(mean=mean(.$rmpg),median=median(.$rmpg))) []
 #'
+#' # Graphics with ggvis
+#' library(ggvis)
+#' Pipe(mtcars)$
+#'   ggvis(~ mpg, ~ wt)$
+#'   layer_points()
+#'
 #' # Data manipulation with rlist
 #' library(rlist)
 #' Pipe(list(1,2,3))$
 #'   list.map(. + 1)$
 #'   list.filter(. <= 5)$
 #'   list.sort(.) []
+#'
+#' # Lazy evaluation
+#' p1 <- Pipe(mtcars)$
+#'   ggvis(~ mpg, ~ wt)
+#' p1$layer_points()
+#' p1$layer_bars()
+#'
+#' # Stored Pipe
+#' f1 <- Pipe(rnorm(100))$plot
+#' f1(col="red")
+#' f1(col="green")
+#' }
 #' @export
-Pipe <- function(value) {
-  envir <- environment()
-  setclass(envir, "Pipe")
+Pipe <- function(value = NULL) {
+  fun <- function(expr) {
+    value <- pipe.lambda(value,substitute(expr),parent.frame())
+    Pipe(value)
+  }
+  . <- function(expr) {
+    value <- pipe.fun(value,substitute(expr),parent.frame())
+    Pipe(value)
+  }
+  .envir <- environment()
+  setclass(.envir, "Pipe")
 }
 
 #' @export
 `$.Pipe` <- function(x,y) {
-  f <-  get(y,envir = parent.frame(),mode = "function")
+  if(exists(y, envir = x, inherits = FALSE))
+    return(get(y, envir = x, inherits = FALSE))
+  f <-  get(y,envir = parent.frame(),mode = "function",inherits = TRUE)
   value <- get("value",envir = x,inherits = FALSE)
   function(...) {
     value <- f(value,...)
@@ -85,15 +102,24 @@ Pipe <- function(value) {
 }
 
 #' @export
-`[.Pipe` <- function(x,...)
-  get("value",envir = x,inherits = FALSE)
-
+`[.Pipe` <- function(x, ...) {
+  get("value", envir = x, inherits = FALSE)
+}
 
 #' @export
-print.Pipe <- function(x,...) {
+print.Pipe <- function(x,...,header=getOption("Pipe.header",TRUE)) {
   value <- get("value",envir = x,inherits = FALSE)
   if(!is.null(value)) {
-    cat("Pipe\n")
+    if(header)
+      cat("$value :",class(value),"\n------\n")
     print(value,...)
   }
+}
+
+#' @export
+str.Pipe <- function(object,...,header=getOption("Pipe.header",TRUE)) {
+  value <- get("value",envir = object,inherits = FALSE)
+  if(header)
+    cat("$value : ")
+  str(value,...)
 }

@@ -194,7 +194,7 @@ hr {
 
 <h1>Introduction to pipeR</h1>
 
-<p>pipeR provides high-performance pipeline operator and object.</p>
+<p>pipeR provides high-performance pipeline operator and light-weight Pipe function based on a set of simple and intuitive rules, making command chaining definite, readable and fast.</p>
 
 <h2><code>%&gt;&gt;%</code></h2>
 
@@ -283,15 +283,40 @@ rnorm(100) %&gt;&gt;% {
   summary
 </code></pre>
 
-<h2>Pipe object</h2>
+<h3>Extract element</h3>
+
+<p>If a name is enclosed within <code>()</code> following <code>%&gt;&gt;%</code>, like <code>x %&gt;&gt;% (name)</code>, the operator will extract the element named <code>name</code> from <code>x</code>.</p>
+
+<pre><code class="r">mtcars %&gt;&gt;%
+  (mpg)
+
+mtcars %&gt;&gt;%
+  (lm(mpg ~ ., data = .)) %&gt;&gt;%
+  summary() %&gt;&gt;%
+  (coefficients)
+</code></pre>
+
+<p>The extraction works not only for list and data frame but also for vector, environment, and S4 object.</p>
+
+<p>To evaluate an expression within the piped object if it is a list or environment, use <code>with()</code> can be helpful.</p>
+
+<pre><code class="r">list(a = 1, b = 2) %&gt;&gt;%
+  with(a+2*b)
+</code></pre>
+
+<p>But this method does not work for vector and S4 object.</p>
+
+<h2>Pipe function</h2>
 
 <p><code>Pipe()</code> creates a Pipe object where built-in symbols are designed for building pipeline. </p>
 
 <ul>
 <li><code>$</code> chains functions by first-argument piping and always returns a Pipe object.</li>
-<li><code>fun()</code> evaluates an expression with <code>.</code> or by lambda expression.</li>
-<li><code>[]</code> extracts the final value of the Pipe object.</li>
+<li><code>.(...)</code> evaluates an expression with <code>.</code> or by lambda expression, or simply extract a named element. The usage is exactly the same with <code>x %&gt;&gt;% (...)</code>.</li>
+<li><code>$value</code> or <code>[]</code> extracts the final value of the Pipe object.</li>
 </ul>
+
+<h3>Usage</h3>
 
 <p>Pipe as first-argument to a function:</p>
 
@@ -302,9 +327,34 @@ rnorm(100) %&gt;&gt;% {
 </code></pre>
 
 <pre><code class="r">Pipe(1:10)$
-  fun(x -&gt; x + rnorm(1))$
+  .(x -&gt; x + rnorm(1))$
   mean() []
 </code></pre>
+
+<h3>Lazy evaluation</h3>
+
+<p>Pipe is lazily evaluated. Consider working with <code>ggvis</code>.</p>
+
+<pre><code class="r">p1 &lt;- Pipe(mtcars)$
+  ggvis(~ mpg, ~ wt)
+</code></pre>
+
+<p>The plot will not be evaluated until p1 is called or further Pipe is evaluated.</p>
+
+<pre><code class="r">p1$layer_points() []
+p1$layer_bars() []
+</code></pre>
+
+<h3>Stored Pipe</h3>
+
+<p>Pipe can also be stored as function.</p>
+
+<pre><code class="r">f1 &lt;- Pipe(rnorm(100))$plot
+f1(col=&quot;red&quot;)
+f1(col=&quot;green&quot;)
+</code></pre>
+
+<p>When the arguments are supplied, <code>plot()</code> will be evaluated. Although Pipe is lazy but its value is determined at first evaluation.</p>
 
 </body>
 

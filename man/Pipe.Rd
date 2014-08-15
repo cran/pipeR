@@ -3,10 +3,10 @@
 \alias{Pipe}
 \title{Pipe object}
 \usage{
-Pipe(value)
+Pipe(value = NULL)
 }
 \arguments{
-\item{value}{value to pipe}
+\item{value}{value to pipe (default is \code{NULL})}
 }
 \value{
 Pipe object
@@ -20,13 +20,18 @@ external operator and look simpler.
 
 \code{Pipe()} creates a Pipe object and then we can use \code{$} to perform
 first-argument piping, call \code{fun()} to evaluate an expression with \code{.}
-or symbol defined by lambda expression. \code{[]} ends a pipeline and extracts
-its final value.
+or symbol defined by lambda expression. \code{$value} or \code{[]} ends a pipeline
+and extracts its final value.
 
 A typical usage of Pipe object is to start with \code{Pipe()} and end with
-\code{[]}.
+\code{$value} or \code{[]}.
+
+\code{print()} and \code{str()} are implemented for \code{Pipe} object.
+Use \code{header = FALSE} to suppress Pipe header message in printed results.
+Use \code{options(Pipe.header = FASLE)} to suppress it globally.
 }
 \examples{
+\dontrun{
 # Pipe as first-argument using $
 Pipe(rnorm(100))$mean()
 Pipe(rnorm(100))$plot(col="red")
@@ -59,11 +64,29 @@ Pipe(mtcars)$
   group_by(cyl)$
   do(data.frame(mean=mean(.$rmpg),median=median(.$rmpg))) []
 
+# Graphics with ggvis
+library(ggvis)
+Pipe(mtcars)$
+  ggvis(~ mpg, ~ wt)$
+  layer_points()
+
 # Data manipulation with rlist
 library(rlist)
 Pipe(list(1,2,3))$
   list.map(. + 1)$
   list.filter(. <= 5)$
   list.sort(.) []
+
+# Lazy evaluation
+p1 <- Pipe(mtcars)$
+  ggvis(~ mpg, ~ wt)
+p1$layer_points()
+p1$layer_bars()
+
+# Stored Pipe
+f1 <- Pipe(rnorm(100))$plot
+f1(col="red")
+f1(col="green")
+}
 }
 

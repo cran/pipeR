@@ -4,12 +4,12 @@
 
 [![Build Status](https://travis-ci.org/renkun-ken/pipeR.png?branch=master)](https://travis-ci.org/renkun-ken/pipeR)
 
-High-performance pipeline operator and object based on a set of simple and intuitive rules, making command chaining definite, readable and fast.
+High-performance pipeline operator and light-weight Pipe function based on a set of simple and intuitive rules, making command chaining definite, readable and fast.
 
 ## What's new in 0.4?
 
 - **Major API Change**: `%>>%` operator now handles all pipeline mechanisms and other operators are deprecated.
-- Add `Pipe` object that supports object-based pipeline operation.
+- Add `Pipe()` function that supports object-based pipeline operation.
 
 [Release notes](https://github.com/renkun-ken/pipeR/releases)
 
@@ -31,88 +31,111 @@ devtools::install_github("pipeR","renkun-ken")
 
 ### `%>>%`
 
-The form of the object following `%>>%` determines which piping mechanism is used. If the operator is followed by, for example, 
+`%>>%` operator behaves based on a set of rules:
 
-| Usage | As if |
-|-------|-------------|
-| `x %>>% f` | `f(x)` |
-| `x %>>% f(...)` | `f(x,...)` |
-| `x %>>% { f(.) }` | `f(x)` |
-| `x %>>% ( f(.) )` | `f(x)` |
-| `x %>>% (i -> f(i))` | `f(x)` |
-| `x %>>% (i ~ f(i))` | `f(x)` |
+* Pipe to first argument and `.` in a function
+
+```r
+rnorm(100) %>>%
+  plot
+
+rnorm(100) %>>%
+  plot(col="red")
+  
+rnorm(100) %>>%
+  plot(col="red", main=length(.))
+```
+
+* Pipe to `.` in an expression
+
+```r
+mtcars %>>%
+  { lm(mpg ~ cyl + wt, data = .) }
+
+mtcars %>>%
+  ( lm(mpg ~ cyl + wt, data = .) )
+```
+
+* Pipe by lambda expression
+
+```r
+mtcars %>>%
+  (df -> lm(mpg ~ cyl + wt, data = df))
+  
+rnorm(100) %>>%
+  (x -> plot(x, col="red", main=length(x)))
+```
+
+* Extract element
+
+```r
+mtcars %>>%
+  (mpg)
+```
+
+Working with [dplyr](https://github.com/hadley/dplyr/):
+
+```r
+library(dplyr)
+mtcars %>>%
+  filter(mpg <= mean(mpg)) %>>%
+  select(mpg, wt, qsec) %>>%
+  (lm(mpg ~ ., data = .)) %>>%
+  summary() %>>%
+  (coefficients)
+```
+
+Working with [ggvis](http://ggvis.rstudio.com/):
+
+```r
+library(ggvis)
+mtcars %>>%
+  ggvis(~mpg, ~wt) %>>%
+  layer_points()
+```
+
+Working with [rlist](http://renkun.me/rlist/):
+
+```r
+library(rlist)
+1:100 %>>%
+  list.group(. %% 3) %>>%
+  list.mapv(g -> mean(g))
+```
 
 ### `Pipe()`
 
-`Pipe()` creates a Pipe object that supports light-weight chaining using internal operators. For example,
+`Pipe()` creates a Pipe object that supports light-weight chaining without any external operator. Typically, start with `Pipe()` and end with `$value` or `[]` to extract the final value of the Pipe. An internal function `.(...)` works in the same way with `x %>>% (...)` for dot piping, lambda expression, and element extraction.
 
-| Usage | Description |
-|-------|-------|
-| `Pipe(x)$foo()$bar()` | Build `Pipe` object for chaining |
-| `Pipe(x)$foo()$bar() []` | Extract the final value |
-| `Pipe(x)$fun(expr)` | Pipe to `.` |
-| `Pipe(x)$fun(x -> expr)` | Pipe to `x` |
-| `Pipe(x)$fun(x ~ expr)` | Pipe to `x` |
+Expressions using `%>>%` can be easily translated to `Pipe()`. But `Pipe()` is shipped with more features. See details in vignettes.
 
-## Examples
-
-### `%>>%`
-
-Pipe as first-argument to a function:
+Working with dplyr:
 
 ```r
-rnorm(100,mean=10) %>>%
-  log %>>%
-  diff %>>%
-  plot(col="red")
+Pipe(mtcars)$
+  filter(mpg >= mean(mpg))$
+  select(mpg, wt, qsec)$
+  .(lm(mpg ~ ., data = .))$
+  summary()$
+  .(coefficients)$
+  value
 ```
 
-Pipe as `.` to an expression enclosed by `{}` or `()`:
+Working with ggvis:
 
 ```r
-rnorm(100) %>>% {
-  x <- .[1:50]
-  y <- .[51:100]
-  lm(y ~ x)
-}
+Pipe(mtcars)$
+  ggvis(~ mpg, ~ wt)$
+  layer_points()
 ```
 
-```r
-mtcars %>>%
-  (lm(mpg ~ ., data = .))
-```
-
-Pipe by lambda expression enclosed by `()`:
+Working with rlist:
 
 ```r
-mtcars %>>%
-  (df -> lm(mpg ~ ., data = df))
-
-mtcars %>>%
-  (df ~ lm(mpg ~ ., data = df))
-```
-
-### `Pipe()`
-
-`Pipe()` creates a Pipe object. 
-
-- `$` chains functions by first-argument piping and always returns a Pipe object.
-- `fun()` evaluates an expression with `.` or by lambda expression.
-- `[]` extracts the final value of the Pipe object.
-
-Pipe as first-argument to a function:
-
-```r
-Pipe(rnorm(100,mean=10))$
-  log()$
-  diff()$
-  plot(col="red")
-```
-
-```r
-Pipe(1:10)$
-  fun(x -> x + rnorm(1))$
-  mean() []
+Pipe(1:100)$
+  list.group(. %% 3)$
+  list.mapv(g -> mean(g))$
+  value
 ```
 
 ## Performance
