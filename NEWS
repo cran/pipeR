@@ -1,3 +1,14 @@
+v0.4-2 (2014-08-22)
+===
+Deprecate fun() in Pipe object, use .() instead.
+Deprecate lambda expression like (x -> expr), use (x ~ expr) instead.
+Add side-effect piping
+Add question piping
+Add subsetting, extracting, assigning to Pipe object
+Resolve compatibility issues with data.table (#28)
+Resolve evaluation environment issues (#20, #34)
+
+
 v0.4-1 (2014-08-15)
 ===
 Add element extraction syntax
@@ -39,7 +50,6 @@ Free piping: `%:>%`
 Lambda piping: `%|>%`
 
 Now this package can perfectly coexist with magritter and dplyr but is not backward compatible with previous code if old operators are used, please notify the potential issues and upgrade to the new set of operators if possible.
-
 
 
 v0.2-4 (2014-05-31)
