@@ -4,51 +4,58 @@
 
 [![Build Status](https://travis-ci.org/renkun-ken/pipeR.png?branch=master)](https://travis-ci.org/renkun-ken/pipeR)
 
-Pipe operator and function based on intuitive syntax
 
-## What's new in 0.4?
+pipeR provides Pipe operator and function based on syntax which support to pipe value to first-argument of a function, to dot in expression, by formula as lambda expression, for side-effect, and with assignment. The set of syntax is designed to make the pipeline highly readable.
 
-[Release notes](https://github.com/renkun-ken/pipeR/releases)
-
-#### 0.4-2
-
-- **API Change**: 
-    * lambda expression like `(x -> expr)` is deprecated, use `(x ~ expr)` instead.
-    * `fun()` in `Pipe` object is deprecated, use `.()` instead.
-- Add side-effect piping: `x %>>% (~ expr)` or `x %>>% (~ i ~ expr)`. `expr` will only be evaluated for its side effect and return `x`.
-- Add question piping: `x %>>% (? expr)` where `expr` is an expression or a lambda expression. `expr` will only be printed and return `x`.
-- Pipe object now supports subsetting, extracting, and assigning, and preserves Pipe object.
-
-#### 0.4-1
-
-- Add element extraction with `x %>>% (name)`.
-
-#### 0.4
-
-- **Major API Change**: `%>>%` operator now handles all pipeline mechanisms and other operators are deprecated.
-- Add `Pipe()` function that supports object-based pipeline operation.
+**[pipeR Tutorial](http://renkun.me/pipeR-tutorial) is a highly recommended complete guide to pipeR.**
 
 ## Installation
 
-Install from CRAN:
+Install from [CRAN](http://cran.r-project.org/web/packages/pipeR/index.html):
 
 ```r
 install.packages("pipeR")
 ```
 
-Install the development version from GitHub (`devtools` package is required):
+Install the development version from GitHub:
 
 ```r
 devtools::install_github("pipeR","renkun-ken")
 ```
 
+## Motivation
+
+The following code is an example written in traditional approach:
+
+It basically performs bootstrap on `mpg` values in built-in dataset `mtcars` and plots  its density function estimated by Gaussian kernel.
+
+```r
+plot(density(sample(mtcars$mpg, size = 10000, replace = TRUE), 
+  kernel = "gaussian"), col = "red", main="density of mpg (bootstrap)")
+```
+
+The code is deeply nested and can be hard to read and maintain. With Pipe operator, it can be reorganized to
+
+```r
+mtcars$mpg %>>%
+  sample(size = 10000, replace = TRUE) %>>%
+  density(kernel = "gaussian") %>>%
+  plot(col = "red", main = "density of mpg (bootstrap)")
+```
+
+The code becomes much cleaner, more readable and more maintainable.
+
 ## Usage
 
 ### `%>>%`
 
-`%>>%` operator behaves based on a set of syntax:
+Pipe operator `%>>%` basically pipes the left-hand side value forward to the right-hand side expression which is evaluated according to its syntax.
 
-* Pipe to first argument and `.` in a function if followed by a function name or call
+#### Pipe to first-argument of function
+
+Many R functions are pipe-friendly: they take some data by the first argument and transform it in a certain way. This arrangement allows operations to be streamlined by pipes, that is, one data source can be put to the first argument of a function, get transformed, and put to the first argument of the next function. In this way, a chain of commands are connected, and it is called a pipeline.
+
+On the right-hand side of `%>>%`, whenever a function name or call is supplied, the left-hand side value will always be put to the first unnamed argument to that function.
 
 ```r
 rnorm(100) %>>%
@@ -60,12 +67,26 @@ rnorm(100) %>>%
   plot(col="red")
 ```
 
+Sometimes the value on the left is needed at multiple places. One can use `.` to represent it anywhere in the function call.
+
 ```r
 rnorm(100) %>>%
   plot(col="red", main=length(.))
 ```
 
-* Pipe to `.` in an expression if it is enclosed within `{}` or `()`
+There are situations where one calls a function in a namespace with `::`. In this case, the call must end up with `()`.
+
+```r
+rnorm(100) %>>%
+  stats::median()
+  
+rnorm(100) %>>%
+  graphics::plot(col = "red")
+```
+
+#### Pipe to `.` in an expression
+
+Not all functions are pipe-friendly in every case: You may find some functions do not take your data produced by a pipeline as the first argument. In this case, you can enclose your expression by `{}` or `()` so that `%>>%` will use `.` to represent the value on the left.
 
 ```r
 mtcars %>>%
@@ -77,61 +98,134 @@ mtcars %>>%
   ( lm(mpg ~ cyl + wt, data = .) )
 ```
 
-* Pipe by lambda expression if followed by `(x ~ expr)`
+#### Pipe by formula as lambda expression
+
+Sometimes, it may look confusing to use `.` to represent the value being piped. For example,
 
 ```r
 mtcars %>>%
-  (df ~ lm(mpg ~ cyl + wt, data = df))
+  (lm(mpg ~ ., data = .))
+```
+
+Although it works perfectly, it may look ambiguous if `.` has several meanings in one line of code. 
+
+`%>>%` accepts lambda expression to direct its piping behavior. Lambda expression is characterized by a formula enclosed within `()`, for example, `(x ~ f(x))`. It contains a user-defined symbol to represent the value being piped and the expression to be evaluated.
+
+```r
+mtcars %>>%
+  (df ~ lm(mpg ~ ., data = df))
 ```
 
 ```r
-rnorm(100) %>>%
-  (x ~ plot(x, col="red", main=length(x)))
+mtcars %>>%
+  subset(select = c(mpg, wt, cyl)) %>>%
+  (x ~ plot(mpg ~ ., data = x))
 ```
 
-* Pipe for side effect if lambda expression starts by `~`
+#### Pipe for side effect
+
+In a pipeline, one may be interested not only in the final outcome but sometimes also in intermediate results. To print, plot or save the intermediate results, it must be a side-effect to avoid breaking the mainstream pipeline. For example, calling `plot()` to draw scatter plot returns `NULL`, and if one directly calls `plot()` in the middle of a pipeline, it would break the pipeline by changing the subsequent input to `NULL`.
+
+One-sided formula that starts with `~` indicates that the right-hand side expression will only be evaluated for its side-effect, its value will be ignored, and the input value will be returned instead.
 
 ```r
-rnorm(100) %>>%
-  (~ cat("number:",length(.),"\n")) %>>%
+mtcars %>>%
+  subset(mpg >= quantile(mpg, 0.05) & mpg <= quantile(mpg, 0.95)) %>>%
+  (~ cat("rows:",nrow(.),"\n")) %>>%   # cat() returns NULL
+  summary
+```
+
+```r
+mtcars %>>%
+  subset(mpg >= quantile(mpg, 0.05) & mpg <= quantile(mpg, 0.95)) %>>%
+  (~ plot(mpg ~ wt, data = .)) %>>%    # plot() returns NULL
+  (lm(mpg ~ wt, data = .)) %>>%
   summary()
 ```
 
-```r
-rnorm(100) %>>%
-  (~ x ~ cat("number:",length(x),"\n")) %>>%
-  summary()
-```
+With `~`, side-effect operations can be easily distinguished from mainstream pipeline.
 
-* Ask question if lambda expression starts by `?`
+An easier way to print the intermediate value it to use `(? expr)` syntax like asking question.
 
 ```r
-iris %>>% 
+mtcars %>>% 
   (? ncol(.)) %>>%
-  summary()
+  summary
 ```
 
-```r
-iris %>>% 
-  (? df ~ ncol(df)) %>>%
-  summary()
-```
+#### Pipe with assignment
 
-* Extract element if followed by name in `()`
+In addition to printing and plotting, one may need to save an intermediate value to the environment by assigning the value to a variable (symbol).
+
+If one needs to assign the value to a symbol, just insert a step like `(~ symbol)`, then the input value of that step will be assigned to `symbol` in the current environment.
 
 ```r
 mtcars %>>%
-  (mpg)
+  (lm(formula = mpg ~ wt + cyl, data = .)) %>>%
+  (~ lm_mtcars) %>>%
+  summary
 ```
+
+If the input value is not directly to be saved but after some transformation, then one can use `=`, `<-`, or more natural `->` to specify a lambda expression to tell what to be saved (thanks @yanlinlin82 for suggestion).
+
+```r
+mtcars %>>%
+  (~ summ = summary(.)) %>>%  # side-effect assignment
+  (lm(formula = mpg ~ wt + cyl, data = .)) %>>%
+  (~ lm_mtcars) %>>%
+  summary
+```
+
+```r
+mtcars %>>%
+  (~ summary(.) -> summ) %>>%
+  
+mtcars %>>%
+  (~ summ <- summary(.)) %>>%
+```
+
+An easier way to saving intermediate value that is to be further piped is to use `(symbol = expression)` syntax:
+
+```r
+mtcars %>>%
+  (~ summ = summary(.)) %>>%  # side-effect assignment
+  (lm_mtcars = lm(formula = mpg ~ wt + cyl, data = .)) %>>%  # continue piping
+  summary
+```
+
+or `(expression -> symbol)` syntax:
+
+```r
+mtcars %>>%
+  (~ summary(.) -> summ) %>>%  # side-effect assignment
+  (lm(formula = mpg ~ wt + cyl, data = .) -> lm_mtcars) %>>%  # continue piping
+  summary
+```
+
+#### Extract element from an object
+
+`x %>>% (y)` means extracting the element named `y` from object `x` where `y` must be a valid symbol name and `x` can be a vector, list, environment or anything else for which `[[]]` is defined, or S4 object.
+
+```r
+mtcars %>>%
+  (lm(mpg ~ wt + cyl, data = .)) %>>%
+  (~ lm_mtcars) %>>%
+  summary %>>%
+  (r.squared)
+```
+
+#### Compatibility
 
 * Working with [dplyr](https://github.com/hadley/dplyr/):
 
 ```r
 library(dplyr)
 mtcars %>>%
-  filter(mpg <= mean(mpg)) %>>%
-  (lm(mpg ~ wt + cyl, data = .)) %>>%
-  summary() %>>%
+  filter(mpg <= mean(mpg)) %>>%  
+  select(mpg, wt, cyl) %>>%
+  (~ plot(.)) %>>%
+  (model = lm(mpg ~ wt + cyl, data = .)) %>>%
+  (summ = summary(.)) %>>%
   (coefficients)
 ```
 
@@ -157,9 +251,11 @@ library(rlist)
 
 `Pipe()` creates a Pipe object that supports light-weight chaining without any external operator. Typically, start with `Pipe()` and end with `$value` or `[]` to extract the final value of the Pipe. 
 
-An internal function `.(...)` works in the same way with `x %>>% (...)` for dot piping, by lambda expression, for side effect, and element extraction.
+Pipe object provides an internal function `.(...)` that work exactly in the same way with `x %>>% (...)`, and it has more features than `%>>%`.
 
-* Examples
+> NOTE: `.()` does not support assignment with `=` but supports `~`, `<-` and `->`.
+
+#### Piping
 
 ```r
 Pipe(rnorm(1000))$
@@ -175,34 +271,50 @@ Pipe(mtcars)$
 
 ```r
 Pipe(mtcars)$
-  .(~ cat("number of columns:", ncol(.), "\n"))$
+  .(~ summary(.) -> summ)$
   lm(formula = mpg ~ wt + cyl)$
   summary()$
   .(coefficients)
 ```
 
-* Subsetting and extracting
+#### Subsetting and extracting
 
 ```r
-df <- Pipe(mtcars)
-df[c("mpg","wt")]$lm(formula = mpg ~ wt)
-df[["mpg"]]$mean()
+pmtcars <- Pipe(mtcars)
+pmtcars[c("mpg","wt")]$
+  lm(formula = mpg ~ wt)$
+  summary()
+pmtcars[["mpg"]]$mean()
 ```
 
-* Assigning values
+#### Assigning values
 
 ```r
-df <- Pipe(list(a=1,b=2))
-df$a <- 0
-df$b <- NULL
+plist <- Pipe(list(a=1,b=2))
+plist$a <- 0
+plist$b <- NULL
 ```
+
+#### Side effect
+
+```r
+Pipe(mtcars)$
+  .(? ncol(.))$
+  .(~ plot(mpg ~ ., data = .))$    # side effect: plot
+  lm(formula = mpg ~ .)$
+  .(~ lm_mtcars)$                  # side effect: assign
+  summary()$
+```
+
+#### Compatibility
 
 * Working with dplyr:
 
 ```r
 Pipe(mtcars)$
   filter(mpg >= mean(mpg))$
-  .(lm(mpg ~ wt + cyl, data = .))$
+  select(mpg, wt, cyl)$
+  lm(formula = mpg ~ wt + cyl)$
   summary()$
   .(coefficients)$
   value
@@ -224,24 +336,6 @@ Pipe(1:100)$
   list.mapv(g ~ mean(g))$
   value
 ```
-
-* For side effect:
-
-```r
-Pipe(iris)$
-  .(~ cat(length(.), "columns","\n"))$
-  .(~ plot(.))$
-  summary()
-```
-
-## Vignettes
-
-The package also provides the following vignettes:
-
-- [Introduction](http://cran.r-project.org/web/packages/pipeR/vignettes/Introduction.html)
-- [Examples](http://cran.r-project.org/web/packages/pipeR/vignettes/Examples.html)
-- [Performance](http://cran.r-project.org/web/packages/pipeR/vignettes/Performance.html)
-
 
 ## Help overview
 

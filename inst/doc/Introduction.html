@@ -5,6 +5,18 @@
 
 <title>Introduction to pipeR</title>
 
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
+
 <!-- Styles for R syntax highlighter -->
 <style type="text/css">
    pre .operator,
@@ -96,7 +108,9 @@ a:visited {
 pre, img {
   max-width: 100%;
 }
-
+pre {
+  overflow-x: auto;
+}
 pre code {
    display: block; padding: 0.5em;
 }
@@ -194,26 +208,52 @@ hr {
 
 <h1>Introduction to pipeR</h1>
 
-<p>pipeR provides high-performance pipeline operator and light-weight Pipe function based on a set of simple and intuitive rules, making command chaining definite, readable and fast.</p>
+<p>pipeR provides Pipe operator and function based on syntax which support to pipe value to first-argument of a function, to dot in expression, by formula as lambda expression, for side-effect, and with assignment. The set of syntax is designed to make the pipeline highly readable.</p>
+
+<h2>Motivation</h2>
+
+<p>The following code is an example written in traditional approach:</p>
+
+<p>It basically performs bootstrap on <code>mpg</code> values in built-in dataset <code>mtcars</code> and plots  its density function estimated by Gaussian kernel.</p>
+
+<pre><code class="r">plot(density(sample(mtcars$mpg, size = 10000, replace = TRUE), 
+  kernel = &quot;gaussian&quot;), col = &quot;red&quot;, main=&quot;density of mpg (bootstrap)&quot;)
+</code></pre>
+
+<p>The code is deeply nested and can be hard to read and maintain. With Pipe operator, it can be reorganized to</p>
+
+<pre><code class="r">mtcars$mpg %&gt;&gt;%
+  sample(size = 10000, replace = TRUE) %&gt;&gt;%
+  density(kernel = &quot;gaussian&quot;) %&gt;&gt;%
+  plot(col = &quot;red&quot;, main = &quot;density of mpg (bootstrap)&quot;)
+</code></pre>
+
+<p>The code becomes much cleaner, more readable and more maintainable.</p>
 
 <h2><code>%&gt;&gt;%</code></h2>
 
-<h3>Pipe as first-argument to function</h3>
+<p>Pipe operator <code>%&gt;&gt;%</code> basically pipes the left-hand side value forward to the right-hand side expression which is evaluated according to its syntax.</p>
 
-<p>The pipe operator <code>%&gt;&gt;%</code> by default inserts the object on the left-hand side to the first argument of the <strong>function</strong> on the right-hand side. In other words, <code>x %&gt;&gt;% f(a=1)</code> will be transformed to and be evaluated as <code>f(.,a=1)</code> where <code>.</code> takes the value of <code>x</code>. It accepts both function call, e.g. <code>plot()</code> or <code>plot(col=&quot;red&quot;)</code>, and function name, e.g. <code>log</code> or <code>plot</code>.</p>
+<h3>Pipe to first-argument of function</h3>
 
-<pre><code class="r">rnorm(100) %&gt;&gt;% 
+<p>Many R functions are pipe-friendly: they take some data by the first argument and transform it in a certain way. This arrangement allows operations to be streamlined by pipes, that is, one data source can be put to the first argument of a function, get transformed, and put to the first argument of the next function. In this way, a chain of commands are connected, and it is called a pipeline.</p>
+
+<p>On the right-hand side of <code>%&gt;&gt;%</code>, whenever a function name or call is supplied, the left-hand side value will always be put to the first unnamed argument to that function.</p>
+
+<p>More specifically, the Pipe operator <code>%&gt;&gt;%</code> by default inserts the object on the left-hand side to the first argument of the <strong>function</strong> on the right-hand side. In other words, <code>x %&gt;&gt;% f(a=1)</code> will be transformed to and be evaluated as <code>f(.,a=1)</code> where <code>.</code> takes the value of <code>x</code>. It accepts both function call, e.g. <code>plot()</code> or <code>plot(col=&quot;red&quot;)</code>, and function name, e.g. <code>log</code> or <code>plot</code>.</p>
+
+<pre><code class="r">rnorm(100) %&gt;&gt;%
   plot
+</code></pre>
 
-rnorm(100) %&gt;&gt;% 
-  plot()
-
-rnorm(100) %&gt;&gt;% 
+<pre><code class="r">rnorm(100) %&gt;&gt;%
   plot(col=&quot;red&quot;)
+</code></pre>
 
-rnorm(100) %&gt;&gt;% 
-  sample(size=100,replace=FALSE) %&gt;&gt;% 
-  hist
+<p>Sometimes the value on the left is needed at multiple places. One can use <code>.</code> to represent it anywhere in the function call.</p>
+
+<pre><code class="r">rnorm(100) %&gt;&gt;%
+  plot(col=&quot;red&quot;,main=sprintf(&quot;Number of points: %d&quot;,length(.)))
 </code></pre>
 
 <p>You can write commands in a chain (or pipeline) like</p>
@@ -225,17 +265,19 @@ rnorm(100) %&gt;&gt;%
   plot(col=&quot;red&quot;,type=&quot;l&quot;)
 </code></pre>
 
-<p>In some cases, the next function needs first-argument piping and uses the piped object elsewhere too. Therefore, you can directly use <code>.</code> to represent the piped object within that call.</p>
+<p>*Notice: function name in a namespace must end up with parentheses like <code>x %&gt;&gt;% base::mean()</code>.</p>
 
-<pre><code class="r">rnorm(100) %&gt;&gt;%
-  plot(col=&quot;red&quot;,main=sprintf(&quot;Number of points: %d&quot;,length(.)))
+<h3>Pipe to <code>.</code> in an expression</h3>
+
+<p>Not all functions are pipe-friendly in every case: You may find some functions do not take your data produced by a pipeline as the first argument. In this case, you can enclose your expression by <code>{}</code> or <code>()</code> so that <code>%&gt;&gt;%</code> will use <code>.</code> to represent the value on the left.</p>
+
+<pre><code class="r">mtcars %&gt;&gt;%
+  { lm(mpg ~ cyl + wt, data = .) }
 </code></pre>
 
-<p>*Notice: function call in a namespace must end up with parentheses like <code>x %&gt;&gt;% base::mean()</code>.</p>
-
-<h3>Pipe as <code>.</code> to expression</h3>
-
-<p>If a function name or call directly follows <code>%&gt;&gt;%</code>, it means first-argument piping. If the operator is follows by braces (<code>{}</code>), the inner expression will be evaluated with <code>.</code> representing the piped object.</p>
+<pre><code class="r">mtcars %&gt;&gt;%
+  ( lm(mpg ~ cyl + wt, data = .) )
+</code></pre>
 
 <pre><code class="r">rnorm(100) %&gt;&gt;% 
   { plot(.) }
@@ -258,45 +300,98 @@ rnorm(100) %&gt;&gt;% {
 }
 </code></pre>
 
-<h3>Pipe by lambda expression</h3>
+<h3>Pipe by formula as lambda expression</h3>
 
 <p>It can be confusing to see multiple <code>.</code> symbols in the same context. In some cases, they may represent different things in the same expression. Even though the expression mostly still works, it may not be a good idea to keep it in that way. Here is an example:</p>
 
 <pre><code class="r">mtcars %&gt;&gt;%
-  { lm(mpg ~ ., data=.) } %&gt;&gt;%
+  (lm(mpg ~ ., data = .)) %&gt;&gt;%
   summary
 </code></pre>
 
-<p>The code above works correctly even though the two dots in the second line have different meanings. <code>.</code> in formula <code>mpg ~ .</code> represents all variables other than <code>mpg</code> in data frame <code>mtcars</code>; <code>.</code> in <code>data=.</code> represents <code>mtcars</code>. One way to reduce ambiguity is to use <em>lambda expression</em> that names the piped object on the left of <code>~</code> or <code>-&gt;</code> and specifies the expression to evaluate on the right.</p>
+<p>The code above works correctly even though the two dots in the second line have different meanings. <code>.</code> in formula <code>mpg ~ .</code> represents all variables other than <code>mpg</code> in data frame <code>mtcars</code>; <code>.</code> in <code>data=.</code> represents <code>mtcars</code>. One way to reduce ambiguity is to use <em>lambda expression</em> that names the piped object on the left of <code>~</code> and specifies the expression to evaluate on the right.</p>
 
 <p><code>%&gt;&gt;%</code> will assume lambda expression follows when the next expression is enclosed by parentheses <code>()</code>. The lambda expression can be in the following forms:</p>
 
 <ul>
 <li><code>expr</code> where <code>.</code> is by default used to represent the piped object.</li>
-<li><code>x -&gt; expr</code> or <code>x ~ expr</code> where <code>expr</code> will be evaluated with <code>x</code> representing the piped object.</li>
+<li><code>x ~ expr</code> where <code>expr</code> will be evaluated with <code>x</code> representing the piped object.</li>
 </ul>
 
 <p>The previous example can be rewritten with lambda expression like this:</p>
 
 <pre><code class="r">mtcars %&gt;&gt;%
-  (df -&gt; lm(mpg ~ ., data=df)) %&gt;&gt;%
+  (df ~ lm(mpg ~ ., data=df)) %&gt;&gt;%
   summary
 </code></pre>
 
-<h3>Extract element</h3>
+<h3>Pipe for side effect</h3>
 
-<p>If a name is enclosed within <code>()</code> following <code>%&gt;&gt;%</code>, like <code>x %&gt;&gt;% (name)</code>, the operator will extract the element named <code>name</code> from <code>x</code>.</p>
+<p>In a pipeline, one may be interested not only in the final outcome but sometimes also in intermediate results. To print, plot or save the intermediate results, it must be a side-effect to avoid breaking the mainstream pipeline. For example, calling <code>plot()</code> to draw scatter plot returns <code>NULL</code>, and if one directly calls <code>plot()</code> in the middle of a pipeline, it would break the pipeline by changing the subsequent input to <code>NULL</code>.</p>
+
+<p>One-sided formula that starts with <code>~</code> indicates that the right-hand side expression will only be evaluated for its side-effect, its value will be ignored, and the input value will be returned instead.</p>
 
 <pre><code class="r">mtcars %&gt;&gt;%
-  (mpg)
-
-mtcars %&gt;&gt;%
-  (lm(mpg ~ ., data = .)) %&gt;&gt;%
-  summary() %&gt;&gt;%
-  (coefficients)
+  subset(mpg &gt;= quantile(mpg, 0.05) &amp; mpg &lt;= quantile(mpg, 0.95)) %&gt;&gt;%
+  (~ cat(&quot;rows:&quot;,nrow(.),&quot;\n&quot;)) %&gt;&gt;%   # cat() returns NULL
+  summary
 </code></pre>
 
-<p>The extraction works not only for list and data frame but also for vector, environment, and S4 object.</p>
+<pre><code class="r">mtcars %&gt;&gt;%
+  subset(mpg &gt;= quantile(mpg, 0.05) &amp; mpg &lt;= quantile(mpg, 0.95)) %&gt;&gt;%
+  (~ plot(mpg ~ wt, data = .)) %&gt;&gt;%    # plot() returns NULL
+  (lm(mpg ~ wt, data = .)) %&gt;&gt;%
+  summary()
+</code></pre>
+
+<p>With <code>~</code>, side-effect operations can be easily distinguished from mainstream pipeline.</p>
+
+<p>An easier way to print the intermediate value it to use <code>(? expr)</code> syntax like asking question.</p>
+
+<pre><code class="r">mtcars %&gt;&gt;% 
+  (? ncol(.)) %&gt;&gt;%
+  summary
+</code></pre>
+
+<h3>Pipe with assignment</h3>
+
+<p>In addition to printing and plotting, one may need to save an intermediate value to the environment by assigning the value to a variable (symbol).</p>
+
+<p>If one needs to assign the value to a symbol, just insert a step like <code>(~ symbol)</code>, then the input value of that step will be assigned to <code>symbol</code> in the current environment.</p>
+
+<pre><code class="r">mtcars %&gt;&gt;%
+  (lm(formula = mpg ~ wt + cyl, data = .)) %&gt;&gt;%
+  (~ lm_mtcars) %&gt;&gt;%
+  summary
+</code></pre>
+
+<p>If the input value is not directly to be saved but after some transformation, then one can use <code>=</code> to specify a lambda expression to tell what to be saved (thanks @yanlinlin82 for suggestion).</p>
+
+<pre><code class="r">mtcars %&gt;&gt;%
+  (~ summ = summary(.)) %&gt;&gt;%  # side-effect assignment
+  (lm(formula = mpg ~ wt + cyl, data = .)) %&gt;&gt;%
+  (~ lm_mtcars) %&gt;&gt;%
+  summary
+</code></pre>
+
+<p>An easier way to saving intermediate value that is to be further piped is to use <code>(symbol = expression)</code> syntax.</p>
+
+<pre><code class="r">mtcars %&gt;&gt;%
+  (~ summ = summary(.)) %&gt;&gt;%  # side-effect assignment
+  (lm_mtcars = lm(formula = mpg ~ wt + cyl, data = .)) %&gt;&gt;%  # continue piping
+  summary
+</code></pre>
+
+<h3>Extract element from an object</h3>
+
+<p><code>x %&gt;&gt;% (y)</code> means extracting the element named <code>y</code> from object <code>x</code> where <code>y</code> must be a valid symbol name and <code>x</code> can be a vector, list, environment or anything else for which <code>[[]]</code> is defined, or S4 object.</p>
+
+<pre><code class="r">mtcars %&gt;&gt;%
+  (lm(mpg ~ wt + cyl, data = .)) %&gt;&gt;%
+  (~ lm_mtcars) %&gt;&gt;%
+  summary %&gt;&gt;%
+  (r.squared)
+</code></pre>
 
 <p>To evaluate an expression within the piped object if it is a list or environment, use <code>with()</code> can be helpful.</p>
 
@@ -310,51 +405,7 @@ mtcars %&gt;&gt;%
 
 <p><code>Pipe()</code> creates a Pipe object where built-in symbols are designed for building pipeline. </p>
 
-<ul>
-<li><code>$</code> chains functions by first-argument piping and always returns a Pipe object.</li>
-<li><code>.(...)</code> evaluates an expression with <code>.</code> or by lambda expression, or simply extract a named element. The usage is exactly the same with <code>x %&gt;&gt;% (...)</code>.</li>
-<li><code>$value</code> or <code>[]</code> extracts the final value of the Pipe object.</li>
-</ul>
-
-<h3>Usage</h3>
-
-<p>Pipe as first-argument to a function:</p>
-
-<pre><code class="r">Pipe(rnorm(100,mean=10))$
-  log()$
-  diff()$
-  plot(col=&quot;red&quot;)
-</code></pre>
-
-<pre><code class="r">Pipe(1:10)$
-  .(x -&gt; x + rnorm(1))$
-  mean() []
-</code></pre>
-
-<h3>Lazy evaluation</h3>
-
-<p>Pipe is lazily evaluated. Consider working with <code>ggvis</code>.</p>
-
-<pre><code class="r">p1 &lt;- Pipe(mtcars)$
-  ggvis(~ mpg, ~ wt)
-</code></pre>
-
-<p>The plot will not be evaluated until p1 is called or further Pipe is evaluated.</p>
-
-<pre><code class="r">p1$layer_points() []
-p1$layer_bars() []
-</code></pre>
-
-<h3>Stored Pipe</h3>
-
-<p>Pipe can also be stored as function.</p>
-
-<pre><code class="r">f1 &lt;- Pipe(rnorm(100))$plot
-f1(col=&quot;red&quot;)
-f1(col=&quot;green&quot;)
-</code></pre>
-
-<p>When the arguments are supplied, <code>plot()</code> will be evaluated. Although Pipe is lazy but its value is determined at first evaluation.</p>
+<p>For more details, view the vignette written for Pipe.</p>
 
 </body>
 

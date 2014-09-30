@@ -1,16 +1,19 @@
-# compatibility for data.table functions
-.datatable.aware <- TRUE
-
 #' Create a Pipe object that stores a value and allows command chaining with \code{$}.
 #' @details
-#' Pipe object provides object-like command chaining mechanism, which avoids using
-#' external operator and can be cleaner than operator-based pipline.
+#' \code{Pipe()} function creates a Pipe object that provides object-like command
+#' chaining mechanism, which avoids using external operator and can be cleaner than
+#' operator-based pipline.
 #'
 #' \code{Pipe()} creates a Pipe object that allows using \code{$} to perform
 #' first-argument piping, call \code{.()} to evaluate an expression with \code{.}
-#' or symbol defined by lambda expression, or simply extract an element from the
-#' stored value. \code{$value} or \code{[]} ends a pipeline and extracts its final
-#' value.
+#' or symbol defined by lambda expression, for side effect, or simply extract an
+#' element from the stored value. \code{$value} or \code{[]} ends a pipeline and
+#' extracts its final value.
+#'
+#' The functionality of Pipe object fully covers that of the pipe operator \code{\%>>\%}
+#' and provides more features. For example, Pipe object supports directly subsetting
+#' \code{$value} by \code{[...]}, extracting element by \code{[[...]]}, and assigning value
+#' by \code{$item <-}, \code{[...] <-}, and \code{[[...]] <-}.
 #'
 #' A typical usage of Pipe object is to start with \code{Pipe()} and end with
 #' \code{$value} or \code{[]}.
@@ -18,6 +21,10 @@
 #' \code{print()} and \code{str()} are implemented for \code{Pipe} object.
 #' Use \code{header = FALSE} to suppress Pipe header message in printed results.
 #' Use \code{options(Pipe.header = FASLE)} to suppress it globally.
+#'
+#' If the Pipe object is used in more than one pipelines, a recommended usage is to name the
+#' object specially so that it is easy to distinguish the Pipe object from the value it
+#' stores. For example, it can start with \code{p}.
 #' @param value value to pipe (default is \code{NULL})
 #' @name Pipe
 #' @return Pipe object
@@ -39,9 +46,23 @@
 #' Pipe(rnorm(100))$
 #'   .(~ cat("number:",length(.),"\n"))$
 #'   summary()
+#'
 #' Pipe(rnorm(100))$
 #'   .(~ x ~ cat("number:",length(x),"\n"))$
 #'   summary()
+#'
+#' # Assignment
+#' Pipe(rnorm(100))$
+#'   .(~ x)$
+#'   mean()
+#'
+#' Pipe(rnorm(100))$
+#'   .(~ x <- length(.))$
+#'   mean()
+#'
+#' Pipe(rnorm(100))%
+#'   .(x <- c(min(.),max(.)))$
+#'   mean()
 #'
 #' # Extract element with \code{.(name)}
 #' Pipe(mtcars)$lm(formula = mpg ~ cyl + wt)$.(coefficients)
@@ -68,6 +89,7 @@
 #' p$a <- 2
 #' p["b"] <- NULL
 #' p[["a"]] <- 3
+#' p[length(.)] # . = p$value
 #'
 #' # Data manipulation with dplyr
 #' library(dplyr)
@@ -104,108 +126,115 @@
 #' }
 #' @export
 Pipe <- function(value = NULL) {
-  fun <- function(expr) {
-    warning("fun() in Pipe has been deprecated, please use .() instead, which also supports side-effect piping and element extraction.", call. = FALSE)
-    value <- pipe.lambda(value,substitute(expr),parent.frame())
-    Pipe(value)
-  }
-  . <- function(expr) {
-    if(!missing(expr))
-      value <- pipe.fun(value,substitute(expr),parent.frame())
-    Pipe(value)
-  }
   .envir <- environment()
-  setclass(.envir, "Pipe")
+  .visible <- TRUE
+  . <- Pipe_dot(value, .envir)
+  setclass(.envir, c("Pipe","environment"))
 }
 
-Pipe.value <- function(x) {
+Pipe_dot <- function(value, envir) {
+  function(expr) {
+    if(missing(expr)) return(envir)
+    args <- withVisible(pipe_fun(value, substitute(expr), parent.frame()))
+    Pipe_new(args)
+  }
+}
+
+Pipe_closure <- function(f, args) {
+  f <- as.symbol(f)
+  function(...) {
+    dots <- match.call(expand.dots = FALSE)$...
+    rcall <- as.call(c(f, quote(.), dots))
+    args <- withVisible(eval(rcall, args, parent.frame()))
+    Pipe_new(args)
+  }
+}
+
+Pipe_new <- function(args) {
+  x <- Pipe(args$value)
+  assign(".visible", args$visible, envir = x)
+  x
+}
+
+Pipe_value <- function(x) {
   get("value", envir = x, inherits = FALSE)
 }
 
-#' @export
-`$.Pipe` <- function(x,y) {
-  if(exists(y, envir = x, inherits = FALSE))
-    return(get(y, envir = x, inherits = FALSE))
-  f <-  get(y, envir = parent.frame(), mode = "function")
-  value <- Pipe.value(x)
-  function(...) {
-    dots <- match.call(expand.dots = FALSE)$`...`
-    rcall <- as.call(c(f,quote(value),dots))
-    value <- eval(rcall,list(value = value),parent.frame())
-    Pipe(value)
-  }
-}
-
-Pipe.get <- function(f, value, dots, envir) {
-  rcall <- as.call(c(f,quote(value),dots))
-  eval(rcall,list(value = value),envir)
+Pipe_visible <- function(x) {
+  get(".visible", envir = x, mode = "logical", inherits = FALSE)
 }
 
 #' @export
-`[.Pipe` <- function(x, ...) {
-  value <- Pipe.value(x)
-  dots <- match.call(expand.dots = FALSE)$`...`
-  if(ndots(dots)) {
-    value <- Pipe.get(`[`,value,dots,parent.frame())
-    Pipe(value)
-  } else {
-    value
+`$.Pipe` <- function(x, i) {
+  if(exists(i, envir = x, inherits = FALSE))
+    return(get(i, envir = x, inherits = FALSE))
+  f <- get(i, envir = parent.frame(), mode = "function")
+  args <- setnames(list(f, Pipe_value(x)), c(i, "."))
+  Pipe_closure(i, args)
+}
+
+Pipe_get <- function(f, value, dots, envir) {
+  if(!ndots(dots)) return(value)
+  rcall <- as.call(c(f, quote(.), dots))
+  args <- withVisible(eval(rcall, list(. = value), envir))
+  Pipe_new(args)
+}
+
+Pipe_get_function <- function(op) {
+  op <- as.symbol(op)
+  function(x, ...) {
+    value <- Pipe_value(x)
+    dots <- match.call(expand.dots = FALSE)$...
+    Pipe_get(op, value, dots, parent.frame())
   }
 }
 
 #' @export
-`[[.Pipe` <- function(x, ...) {
-  value <- Pipe.value(x)
-  dots <- match.call(expand.dots = FALSE)$`...`
-  if(ndots(dots)) {
-    value <- Pipe.get(`[[`,value,dots,parent.frame())
-    Pipe(value)
-  } else {
-    value
+`[.Pipe` <- Pipe_get_function("[")
+
+#' @export
+`[[.Pipe` <- Pipe_get_function("[[")
+
+
+Pipe_set <- function(f, x, dots, value, envir) {
+  if(!ndots(dots)) return(value)
+  rcall <- as.call(c(f,quote(.), dots, quote(value)))
+  args <- withVisible(eval(rcall,list(. = x, value = value), envir))
+  Pipe_new(args)
+}
+
+Pipe_set_function <- function(op) {
+  op <- as.symbol(op)
+  function(x,...,value) {
+    dots <- match.call(expand.dots = FALSE)$...
+    Pipe_set(op, Pipe_value(x), dots, value, parent.frame())
   }
 }
+
+#' @export
+`$<-.Pipe` <- Pipe_set_function("$<-")
+
+#' @export
+`[<-.Pipe` <- Pipe_set_function("[<-")
+
+#' @export
+`[[<-.Pipe` <- Pipe_set_function("[[<-")
+
 
 #' @export
 print.Pipe <- function(x,...,header=getOption("Pipe.header",TRUE)) {
-  value <- Pipe.value(x)
-  if(!is.null(value)) {
-    if(header) cat("$value :",class(value),"\n------\n")
+  value <- Pipe_value(x)
+  if(Pipe_visible(x)) {
+    if(header) {
+      cat("<Pipe:", class(value))
+      cat(">\n")
+    }
     print(value,...)
   }
 }
 
 #' @export
 str.Pipe <- function(object,...,header=getOption("Pipe.header",TRUE)) {
-  if(header) cat("$value : ")
-  str(Pipe.value(object),...)
-}
-
-
-Pipe.set <- function(f, x, dots, value, envir) {
-  rcall <- as.call(c(f,quote(x),dots,quote(value)))
-  eval(rcall,list(x = x, value = value),envir)
-}
-
-#' @export
-`$<-.Pipe` <- function(x,...,value) {
-  dots <- match.call(expand.dots = FALSE)$`...`
-  if(ndots(dots))
-    value <- Pipe.set(`$<-`, Pipe.value(x), dots, value, parent.frame())
-  Pipe(value)
-}
-
-#' @export
-`[<-.Pipe` <- function(x,...,value) {
-  dots <- match.call(expand.dots = FALSE)$`...`
-  if(ndots(dots))
-    value <- Pipe.set(`[<-`, Pipe.value(x), dots, value, parent.frame())
-  Pipe(value)
-}
-
-#' @export
-`[[<-.Pipe` <- function(x,...,value) {
-  dots <- match.call(expand.dots = FALSE)$`...`
-  if(ndots(dots))
-    value <- Pipe.set(`[[<-`, Pipe.value(x), dots, value, parent.frame())
-  Pipe(value)
+  if(header) cat("<Pipe>\n")
+  str(Pipe_value(object),...)
 }

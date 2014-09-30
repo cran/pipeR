@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-<title>Examples</title>
+<title>Pipe</title>
 
 <script type="text/javascript">
 window.onload = function() {
@@ -203,129 +203,91 @@ hr {
 <body>
 <!--
 %\VignetteEngine{knitr}
-%\VignetteIndexEntry{Examples}
+%\VignetteIndexEntry{Pipe}
 -->
 
-<h1>Examples</h1>
+<h1>Pipe</h1>
 
-<h2>Working with basic functions</h2>
+<p><code>Pipe()</code> creates a Pipe object where built-in symbols are designed for building pipeline. </p>
 
-<p>Density plot:</p>
+<ul>
+<li><code>$</code> chains functions by first-argument piping and always returns a Pipe object.</li>
+<li><code>.(...)</code> evaluates an expression with <code>.</code> or by lambda expression, or for side effect, or simply extract a named element. The usage is exactly the same with <code>x %&gt;&gt;% (...)</code>.</li>
+<li>Subsetting, extracting, and assigning with Pipe on its inner value and Pipe object is preserved.</li>
+<li><code>$value</code> or <code>[]</code> extracts the final value of the Pipe object.</li>
+</ul>
 
-<pre><code class="r">rnorm(100) %&gt;&gt;%
-  density(kernel = &quot;cosine&quot;) %&gt;&gt;%
-  plot(col = &quot;blue&quot;)
+<h2>Usage</h2>
+
+<p>Pipe as first-argument to a function:</p>
+
+<pre><code class="r">Pipe(rnorm(100,mean=10))$
+  log()$
+  diff()$
+  plot(col=&quot;red&quot;)
 </code></pre>
 
-<p>Plot some graphics, run a linear regression, and see the summary of the estimates of linear coefficients.</p>
-
-<pre><code class="r">mtcars %&gt;&gt;%
-  (~ par(mfrow=c(1,2))) %&gt;&gt;%
-  (~ plot(mpg ~ cyl, data = .)) %&gt;&gt;%
-  (~ plot(mpg ~ wt, data = .)) %&gt;&gt;%
-  (lm(mpg ~ cyl + wt, data = .)) %&gt;&gt;%
-  summary() %&gt;&gt;%
-  (coefficients)
-</code></pre>
-
-<p>The <code>Pipe</code> version:</p>
+<p>Pipe by lambda expression</p>
 
 <pre><code class="r">Pipe(mtcars)$
-  .(~ par(mfrow=c(1,2)))$
-  .(~ plot(mpg ~ cyl, data = .))$
-  .(~ plot(mpg ~ wt, data = .))$
-  .(lm(mpg ~ cyl + wt, data = .))$
-  summary()$
-  .(coefficients)
+  .(lm(mpg ~ ., data = .))$
+  summary() []
 </code></pre>
-
-<h2>Working with dplyr</h2>
-
-<p><code>dplyr</code> package (<a href="http://cran.r-project.org/web/packages/dplyr/">CRAN</a>,<a href="https://github.com/hadley/dplyr">GitHub</a>) provides a group of functions that make data transformation much easier. These operators are fully compatible with <code>dplyr</code> and provide higher performance than its default pipe operator.</p>
-
-<p>The following code demonstrates piping with <code>dplyr</code> functions.</p>
-
-<pre><code class="r">library(dplyr)
-library(pipeR)
-
-mtcars %&gt;&gt;%
-  select(mpg,cyl,disp,hp) %&gt;&gt;%
-  filter(mpg &lt;= median(mpg)) %&gt;&gt;%
-  mutate(rmpg = mpg / max(mpg)) %&gt;&gt;%
-  group_by(cyl) %&gt;&gt;%
-  do(data.frame(mean=mean(.$rmpg),median=median(.$rmpg)))
-</code></pre>
-
-<p><code>.</code> in the last call is introduced by <code>do(...)</code> rather than <code>%&gt;&gt;%</code>, which also makes it clear the scope of symbols.</p>
-
-<p>Equivalently, Pipe object can do the same thing.</p>
 
 <pre><code class="r">Pipe(mtcars)$
-  select(mpg,cyl,disp,hp)$
-  filter(mpg &lt;= median(mpg))$
-  mutate(rmpg = mpg / max(mpg))$
-  group_by(cyl)$
-  do(data.frame(mean=mean(.$rmpg),median=median(.$rmpg))) []
+  .(df ~ lm(mpg ~ ., data = df))$
+  summary() []
 </code></pre>
 
-<h2>Working with rlist</h2>
+<p>Pipe for extracting element</p>
 
-<p><a href="http://renkun.me/rlist/"><code>rlist</code> package</a> (<a href="http://cran.r-project.org/web/packages/rlist/">CRAN</a>,<a href="https://github.com/renkun-ken/rlist">GitHub</a>) is a set of tools for working with list objects storing non-tabular non-relational, or non-structured data as opposed to data frames. The major functions in this package are intentionally designed to work with pipeline.</p>
-
-<p>The following example deals with the list of developers with names, ages, interests, and programming language they use and the number of years they have been using them.</p>
-
-<pre><code class="r">library(rlist)
-library(pipeR)
-devs &lt;- 
-  list(
-    p1=list(name=&quot;Ken&quot;,age=24,
-      interest=c(&quot;reading&quot;,&quot;music&quot;,&quot;movies&quot;),
-      lang=list(r=2,csharp=4,python=3)),
-    p2=list(name=&quot;James&quot;,age=25,
-      interest=c(&quot;sports&quot;,&quot;music&quot;),
-      lang=list(r=3,java=2,cpp=5)),
-    p3=list(name=&quot;Penny&quot;,age=24,
-      interest=c(&quot;movies&quot;,&quot;reading&quot;),
-      lang=list(r=1,cpp=4,python=2)))
+<pre><code class="r">Pipe(mtcars)$
+  .(mpg)$
+  summary() []
 </code></pre>
 
-<p>The following code queries the name of each developer who likes music and uses R, and put stack the results in a data frame.</p>
+<p>Pipe for side effect</p>
 
-<pre><code class="r">devs %&gt;&gt;% 
-  list.filter(&quot;music&quot; %in% interest &amp; &quot;r&quot; %in% names(lang)) %&gt;&gt;%
-  list.select(name,age) %&gt;&gt;%
-  list.stack
+<pre><code class="r">Pipe(iris)$
+  .(~ cat(length(.), &quot;columns&quot;,&quot;\n&quot;))$
+  .(~ plot(.))$
+  summary()
 </code></pre>
 
-<p>or equivalently using Pipe object:</p>
+<p>Subsetting Pipe object</p>
 
-<pre><code class="r">Pipe(devs)$
-  list.filter(&quot;music&quot; %in% interest &amp; &quot;r&quot; %in% names(lang))$
-  list.select(name,age)$
-  list.stack() []
+<pre><code class="r">Pipe(mtcars)[&quot;mpg&quot;]
 </code></pre>
 
-<p>The following example groups the developers by age and for each group it classifies the developers into interest classes and count the number of people in each class.</p>
+<p>Extracting from Pipe object</p>
 
-<pre><code class="r">devs %&gt;&gt;%
-  list.group(age) %&gt;&gt;%
-  list.map(group ~ group %&gt;&gt;%
-      list.class(interest) %&gt;&gt;%
-      list.mapv(int ~ length(int)))
+<pre><code class="r">Pipe(mtcars)[[&quot;mpg&quot;]]
 </code></pre>
 
-<p>or equivalently using Pipe object:</p>
+<p>Assigning to Pipe object&#39;s element</p>
 
-<pre><code class="r">Pipe(devs)$
-  list.group(age)$
-  list.map(group ~ 
-    Pipe(group)$
-      list.class(interest)$
-      list.mapv(int ~ length(int))$
-      value
-    )$
-  value
+<pre><code class="r">plist &lt;- Pipe(list(a=1,b=2))
+plist$a &lt;- 0
+plist$b &lt;- NULL
 </code></pre>
+
+<pre><code class="r">plist &lt;- Pipe(list(a=1,b=2))
+plist[&quot;a&quot;] &lt;- 2
+plist[[&quot;b&quot;]] &lt;- 3
+</code></pre>
+
+<p>If the Pipe object is used in more than one pipelines, a recommended usage is to name the object specially so that it is easy to distinguish the Pipe object from the value it stores. For example, it can start with <code>p</code>, as shown above.</p>
+
+<h2>Stored Pipe object</h2>
+
+<p>Pipe can also be stored as function.</p>
+
+<pre><code class="r">f1 &lt;- Pipe(rnorm(100))$plot
+f1(col=&quot;red&quot;)
+f1(col=&quot;green&quot;)
+</code></pre>
+
+<p>When the arguments are supplied, <code>plot()</code> will be evaluated. Although Pipe is lazy but its value is determined at first evaluation.</p>
 
 </body>
 
