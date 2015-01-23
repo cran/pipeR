@@ -4,22 +4,21 @@
 setnames <- `names<-`
 setclass <- `class<-`
 
+dots <- function(...) {
+  eval(substitute(alist(...)))
+}
+
 ndots <- function(dots) {
-  length(dots) >= 1L && any(nzchar(dots))
+  any(nzchar(dots))
 }
 
 is.formula <- function(expr) {
-  is.call(expr) && as.character(expr) == "~"
+  inherits(expr, "formula") || (is.call(expr) && expr[[1L]] == "~")
 }
 
 is.side_effect <- function(expr) {
-  if(!is.formula(expr)) return(FALSE)
-  if(length(expr) == 2L)
-    # side-effect symbol
-    TRUE
-  else if(length(expr) == 3L && Recall(expr[[2L]]))
-    # side-effect formula
-    TRUE
-  else
-    FALSE
+  is.formula(expr) &&
+    (length(expr) == 2L ||
+        length(expr) == 3L &&
+        Recall(expr[[2L]]))
 }
