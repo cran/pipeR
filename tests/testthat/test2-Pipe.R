@@ -46,6 +46,11 @@ test_that("lambda piping", {
   expect_identical(Pipe(1:3)$.(x ~ c(1,2,x))[], c(1,2,1:3))
 })
 
+test_that("closure", {
+  expect_is(Pipe_get_function(quote(`[`)), "function")
+  expect_is(Pipe_set_function(quote(`[`)), "function")
+})
+
 test_that("side effect", {
   side <- function(x) {
     x + 1
@@ -156,4 +161,11 @@ test_that("scoping", {
   expect_identical(pobj()$value,1L)
   expect_identical(local({p <- function(x) 0L; pobj()$value}),1L)
   expect_identical(local({p <- function(x) 0L; Pipe(0)$p()$value}),0L)
+})
+
+test_that("printing", {
+  expect_output(print(Pipe(1:3)), "<Pipe: integer>.+")
+  expect_output(print(Pipe(1:10)$invisible()), "")
+  expect_output(str(Pipe(1:3)), "<Pipe>.+")
+  expect_output(str(Pipe(1:3)$invisible()), "<Pipe>.+")
 })

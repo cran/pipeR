@@ -2,7 +2,7 @@
 
 # pipeR
 
-[![Build Status](https://travis-ci.org/renkun-ken/pipeR.png?branch=master)](https://travis-ci.org/renkun-ken/pipeR) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/renkun-ken/pipeR?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/renkun-ken/pipeR.png?branch=master)](https://travis-ci.org/renkun-ken/pipeR) [![Coverage Status](https://coveralls.io/repos/renkun-ken/pipeR/badge.svg)](https://coveralls.io/r/renkun-ken/pipeR) [![CRAN Version](http://www.r-pkg.org/badges/version/pipeR)](http://cran.rstudio.com/web/packages/pipeR)
 
 pipeR provides various styles of function chaining methods: 
 
@@ -10,18 +10,20 @@ pipeR provides various styles of function chaining methods:
 * Pipe object
 * pipeline function
 
-Each of them represents a distinct pipeline model but they share almost a common set of features. A value can be piped to the next expression as
+Each of them represents a distinct pipeline model but they share almost a common set of features. A value can be piped to the next expression
 
-* The first unnamed argument of the function
-* Dot symbol in the expression
-* A named variable defined by a formula
-* Side-effect that branches the pipeline
-* Assignment that saves intermediate values of the pipeline
+* As the first unnamed argument of the function
+* As dot symbol (`.`) in the expression
+* As a named variable defined by a formula
+* For side-effect that carries over the input to the next
+* For assignment that saves an intermediate value
 
 The syntax is designed to make the pipeline more readable and friendly to
 a wide variety of operations.
 
 **[pipeR Tutorial](http://renkun.me/pipeR-tutorial) is a highly recommended complete guide to pipeR.**
+
+This document is also translated into [日本語](https://github.com/renkun-ken/pipeR/blob/master/README.ja.md) (by [@hoxo_m](https://github.com/hoxo-m/)).
 
 ## Installation
 
