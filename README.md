@@ -2,7 +2,10 @@
 
 # pipeR
 
-[![Build Status](https://travis-ci.org/renkun-ken/pipeR.png?branch=master)](https://travis-ci.org/renkun-ken/pipeR) [![Coverage Status](https://coveralls.io/repos/renkun-ken/pipeR/badge.svg)](https://coveralls.io/r/renkun-ken/pipeR) [![CRAN Version](http://www.r-pkg.org/badges/version/pipeR)](http://cran.rstudio.com/web/packages/pipeR)
+[![Linux Build Status](https://travis-ci.org/renkun-ken/pipeR.png?branch=master)](https://travis-ci.org/renkun-ken/pipeR) 
+[![Windows Build status](https://ci.appveyor.com/api/projects/status/github/renkun-ken/pipeR?svg=true)](https://ci.appveyor.com/project/renkun-ken/pipeR)
+[![codecov.io](http://codecov.io/github/renkun-ken/pipeR/coverage.svg?branch=master)](http://codecov.io/github/renkun-ken/pipeR?branch=master)
+[![CRAN Version](http://www.r-pkg.org/badges/version/pipeR)](https://cran.r-project.org/package=pipeR)
 
 pipeR provides various styles of function chaining methods: 
 
@@ -33,7 +36,7 @@ Install the latest development version from GitHub:
 devtools::install_github("renkun-ken/pipeR")
 ```
 
-Install from [CRAN](http://cran.r-project.org/web/packages/pipeR/index.html):
+Install from [CRAN](https://cran.r-project.org/package=pipeR):
 
 ```r
 install.packages("pipeR")
